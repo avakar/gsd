@@ -18,7 +18,7 @@
   <body ng-app="myapp2App" ng-controller="tasklistController">
     <!-- Add your site or application content here -->
 
-    <input type="text" placeholder="Add new task" arrow-navigable>
+    <input type="text" ui-keypress="{13:'createNewTask($event)'}" placeholder="Add new task" arrow-navigable>
 
     <ul ui-sortable="sortableOptions" id="tasklist">
         <li ng-repeat="entry in tasklist" class="item">
@@ -37,6 +37,7 @@
     <script src="bower_components/angular-bootstrap/ui-bootstrap-tpls.js"></script>
     <script src="bower_components/jquery-ui/jquery-ui.js"></script>
     <script src="bower_components/angular-ui-sortable/sortable.js"></script>
+    <script src="bower_components/angular-ui-utils/keypress.js"></script>
     <!-- endbower -->
     <!-- endbuild -->
 

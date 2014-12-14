@@ -1,6 +1,6 @@
 'use strict';
 
-var app = angular.module('myapp2App', ['ui.bootstrap', 'ui.sortable']);
+var app = angular.module('myapp2App', ['ui.bootstrap', 'ui.sortable', 'ui.keypress']);
 
 app.directive('arrowNavigable', function() {
 
@@ -81,5 +81,11 @@ app.controller('tasklistController', function($scope) {
         ];
     $scope.sortableOptions = {
         handle: '> .drag-handle'
+    };
+    $scope.createNewTask = function(e) {
+        var val = e.target.value;
+        e.target.value = '';
+        this.tasklist.unshift({ text: val, value: this.tasklist.length });
+        e.preventDefault();
     };
 });
