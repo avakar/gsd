@@ -18,6 +18,8 @@
   <body ng-app="myapp2App" ng-controller="tasklistController">
     <!-- Add your site or application content here -->
 
+    <input type="text" placeholder="Add new task" arrow-navigable>
+
     <ul ui-sortable="sortableOptions" id="tasklist">
         <li ng-repeat="entry in tasklist" class="item">
             <div class="drag-handle"></div>
