@@ -75,9 +75,9 @@ app.directive('arrowNavigable', function() {
 
 app.controller('tasklistController', function($scope) {
     $scope.tasklist = [
-        { text: 'a', value: 1 },
-        { text: 'b', value: 2 },
-        { text: 'c', value: 3 },
+        { text: 'a', complete: false },
+        { text: 'b', complete: true },
+        { text: 'c', complete: false },
         ];
     $scope.sortableOptions = {
         handle: '> .drag-handle'
@@ -85,7 +85,7 @@ app.controller('tasklistController', function($scope) {
     $scope.createNewTask = function(e) {
         var val = e.target.value;
         e.target.value = '';
-        this.tasklist.unshift({ text: val, value: this.tasklist.length });
+        this.tasklist.unshift({ text: val, complete: false });
         e.preventDefault();
     };
 });

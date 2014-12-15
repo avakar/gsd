@@ -20,12 +20,15 @@
 
     <input type="text" ui-keypress="{13:'createNewTask($event)'}" placeholder="Add new task" arrow-navigable>
 
-    <ul ui-sortable="sortableOptions" id="tasklist">
+    <ul ui-sortable="sortableOptions" id="tasklist" ng-model="tasklist">
         <li ng-repeat="entry in tasklist" class="item">
             <div class="drag-handle"></div>
-            <input class="item-text" type="text" value="{{entry.text}}" arrow-navigable>
+            <input type="checkbox" ng-model="entry.complete">
+            <input class="item-text" type="text" ng-model="entry.text" arrow-navigable>
         </li>
     </ul>
+
+    <pre>{{tasklist | json}}</pre>
 
     <!-- build:js(.) scripts/vendor.js -->
     <!-- bower:js -->
