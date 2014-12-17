@@ -18,17 +18,28 @@
   <body ng-app="myapp2App" ng-controller="tasklistController">
     <!-- Add your site or application content here -->
 
-    <input type="text" ui-keypress="{13:'createNewTask($event)'}" placeholder="Add new task" arrow-navigable>
+    <div style="float: left">
+        <form>
+            <div ng-repeat="(name, f) in filters">
+                <input type="radio" ng-model="filter" ng-value="f">{{name}}</input>
+            </div>
+        </form>
+    </div>
 
-    <ul ui-sortable="sortableOptions" id="tasklist" ng-model="tasklist">
-        <li ng-repeat="entry in tasklist" class="item">
-            <div class="drag-handle"></div>
-            <input type="checkbox" ng-model="entry.complete">
-            <input class="item-text" type="text" ng-model="entry.text" arrow-navigable>
-        </li>
-    </ul>
+    <div>
+        <input type="text" ui-keypress="{13:'createNewTask($event)'}" placeholder="Add new task" arrow-navigable>
 
-    <pre>{{tasklist | json}}</pre>
+        <ul ui-sortable="sortableOptions" id="tasklist" ng-model="tasklist.filtered">
+            <li ng-repeat="entry in tasklist.filtered" class="item">
+                <div class="drag-handle"></div>
+                <input type="checkbox" ng-model="entry.complete">
+                <input class="item-text" type="text" ng-model="entry.text" arrow-navigable>
+            </li>
+        </ul>
+    </div>
+
+    <pre>{{tasklist.filtered | json}}</pre>
+    <pre>{{serializeTasklist() | json}}</pre>
 
     <!-- build:js(.) scripts/vendor.js -->
     <!-- bower:js -->
