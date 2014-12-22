@@ -83,7 +83,7 @@ app.factory('$storage', function($window) {
 app.run(function($rootScope, $http, gsignin, taskapi) {
     $rootScope.$on('gsignin', function(scope, authResult) {
         if (authResult['status']['signed_in']) {
-            $http.post('http://localhost:5000/auth/google', {
+            $http.post('http://ratatanek.cz:5000/auth/google', {
                 id_token: authResult['id_token']
                 }).
                 success(function(data, status, headers, config) {
@@ -182,7 +182,8 @@ function Task(changeCallback, id, text, complete) {
         changeCallback: changeCallback,
         id: id,
         text: text,
-        complete: complete
+        complete: complete,
+        tags: [],
     };
 
     Object.defineProperty(this, 'prev', {
@@ -229,6 +230,27 @@ function Task(changeCallback, id, text, complete) {
             }
         }
     });
+
+    Object.defineProperty(this, 'tags', {
+        enumerable: true,
+        configurable: false,
+        get: function() { return priv.tags; },
+    });
+
+    this.addTag = function(tag) {
+        if (priv.tags.indexOf(tag) === -1) {
+            priv.tags.push(tag);
+            priv.changeCallback(this);
+        }
+    };
+
+    this.removeTag = function(tag) {
+        var pos = priv.tags.indexOf(tag);
+        if (pos !== -1) {
+            priv.tags.splice(pos, 1);
+            priv.changeCallback(this);
+        }
+    };
 }
 
 function ListHead() {
@@ -367,6 +389,11 @@ function Tasklist() {
                 curTask = priv.task_map[t.id];
                 curTask.text = t.text;
                 curTask.complete = t.complete;
+                if ('tags' in t) {
+                    t.tags.forEach(function(tag) {
+                        curTask.addTag(tag);
+                    });
+                }
             } else {
                 curTask = new Task(onChange, t.id, t.text, t.complete);
             }
@@ -413,7 +440,7 @@ function Tasklist() {
             cur = cur.next;
         }
 
-        return JSON.stringify(res);
+        return angular.toJson(res);
     };
 }
 
@@ -436,7 +463,7 @@ app.service('taskapi', function($http, $timeout) {
 
     function load_from_server() {
         priv.load_timeout_promise = null;
-        $http.get('http://localhost:5000/tasks', {
+        $http.get('http://ratatanek.cz:5000/tasks', {
             headers: { 'Authorization': 'Bearer ' + priv.token }
             })
             .success(function(data) {
@@ -470,7 +497,7 @@ app.service('taskapi', function($http, $timeout) {
             var data = {
                 tasks: ser,
                 };
-            $http.put('http://localhost:5000/tasks', data, {
+            $http.put('http://ratatanek.cz:5000/tasks', data, {
                 headers: { 'Authorization': 'Bearer ' + priv.token }
                 })
                 .success(function(data) {
@@ -494,6 +521,7 @@ app.service('taskapi', function($http, $timeout) {
 
             priv.token = token;
             if (token) {
+                priv.tasklist_version = null;
                 load_from_server();
             } else {
                 priv.tasklist.clear();
@@ -569,7 +597,7 @@ function FilteredTasklist(tasklist, filter) {
     };
 
     this.toJson = function() {
-        return JSON.stringify(this.filtered);
+        return angular.toJson(this.filtered);
     };
 
     var self = this;
