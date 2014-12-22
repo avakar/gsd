@@ -2,6 +2,104 @@
 
 var app = angular.module('myapp2App', ['ui.bootstrap', 'ui.sortable', 'ui.keypress']);
 
+app.provider('gsignin', function() {
+    function Gsignin($rootScope, $timeout, provider) {
+        var priv = {
+            id_token: null
+        };
+
+        function authCallback(authResult) {
+            $timeout(function() {
+                if (authResult['status']['signed_in']) {
+                    priv.id_token = authResult['id_token'];
+                } else {
+                    priv.id_token = null;
+                }
+
+                $rootScope.$broadcast('gsignin', authResult);
+            });
+        }
+
+        this.render = function(elem) {
+            gapi.signin.render(elem[0], {
+                clientid: provider.clientid,
+                cookiepolicy: provider.cookiepolicy,
+                callback: authCallback,
+                requestvisibleactions: provider.requestvisibleactions,
+                scope: provider.scope,
+                width: provider.width
+            });
+        };
+
+        this.signin = function() {
+            gapi.auth.signIn({
+                clientid: provider.clientid,
+                cookiepolicy: provider.cookiepolicy,
+                callback: authCallback,
+                requestvisibleactions: provider.requestvisibleactions,
+                scope: provider.scope,
+            });
+        };
+
+        this.signout = function() {
+            gapi.auth.signOut();
+        };
+
+        Object.defineProperty(this, 'signedin', {
+            enumerable: true,
+            configurable: false,
+            get: function() {
+                return priv.id_token !== null;
+            }
+        });
+
+        Object.defineProperty(this, 'id_token', {
+            enumerable: true,
+            configurable: false,
+            get: function() {
+                return priv.id_token;
+            }
+        });
+    }
+
+    this.cookiepolicy = 'single_host_origin';
+    this.requestvisibleactions = '';
+    this.scope = 'profile email';
+    this.width = 'standard';
+    this.$get = function($rootScope, $timeout) {
+        return new Gsignin($rootScope, $timeout, this);
+    };
+});
+
+app.config(function(gsigninProvider) {
+    gsigninProvider.clientid = '1072740187119-8ls2oofeinouckglv02pq6ao3s82vi70.apps.googleusercontent.com';
+    //gsigninProvider.width = 'iconOnly';
+});
+
+app.run(function($rootScope, $http, gsignin) {
+    $rootScope.$on('gsignin', function(scope, authResult) {
+        if (authResult['status']['signed_in']) {
+            $http.post('http://localhost:5000/auth/google', {
+                id_token: authResult['id_token']
+                }).
+                success(function(data, status, headers, config) {
+                    alert(data);
+                }).
+                error(function(data, status, headers, config) {
+                    alert('error');
+                });
+        }
+    });
+});
+
+app.directive('gsignin', function(gsignin) {
+    return {
+        link: function(scope, elem, attrs, controller) {
+            gsignin.render(elem);
+        }
+    };
+});
+
 app.directive('arrowNavigable', function() {
 
     function findprev(node) {
@@ -221,7 +319,7 @@ function Tasklist(filter) {
     };
 }
 
-app.controller('tasklistController', function($scope) {
+app.controller('tasklistController', function($scope, gsignin) {
     $scope.filters = {
         Next: new Filter(true),
         All: new Filter(false)
@@ -253,4 +351,10 @@ app.controller('tasklistController', function($scope) {
         this.tasklist.addTask(val, false);
         e.preventDefault();
     };
+
+    $scope.signout = function() {
+        gsignin.signout();
+    };
+
+    $scope.gapi = gsignin;
 });

@@ -14,9 +14,16 @@
     <!-- build:css(.tmp) styles/main.css -->
     <link rel="stylesheet" href="styles/main.css">
     <!-- endbuild -->
+    <script src="https://apis.google.com/js/client:platform.js"></script>
   </head>
   <body ng-app="myapp2App" ng-controller="tasklistController">
     <!-- Add your site or application content here -->
+
+    <div ng-cloak>
+        <span ng-if="!gapi.signedin" gsignin></span>
+        <button ng-if="gapi.signedin" ng-click="signout()">Sign Out</button>
+        {{gapi.id_token}}
+    </div>
 
     <div style="float: left">
         <form>
