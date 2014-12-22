@@ -20,9 +20,8 @@
     <!-- Add your site or application content here -->
 
     <div ng-cloak>
-        <span ng-if="!gapi.signedin" gsignin></span>
-        <button ng-if="gapi.signedin" ng-click="signout()">Sign Out</button>
-        {{gapi.id_token}}
+        <span ng-if="!taskapi.signedin" gsignin></span>
+        <button ng-if="taskapi.signedin" ng-click="signout()">Sign Out</button>
     </div>
 
     <div style="float: left">
@@ -45,8 +44,8 @@
         </ul>
     </div>
 
-    <pre>{{tasklist.filtered | json}}</pre>
-    <pre>{{serializeTasklist() | json}}</pre>
+    <pre>{{serializeTasklist()}}</pre>
+    <pre>{{raw_tasklist.toJson()}}</pre>
 
     <!-- build:js(.) scripts/vendor.js -->
     <!-- bower:js -->

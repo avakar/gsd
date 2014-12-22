@@ -76,18 +76,24 @@ app.config(function(gsigninProvider) {
     //gsigninProvider.width = 'iconOnly';
 });
 
-app.run(function($rootScope, $http, gsignin) {
+app.factory('$storage', function($window) {
+    return $window.localStorage;
+});
+
+app.run(function($rootScope, $http, gsignin, taskapi) {
     $rootScope.$on('gsignin', function(scope, authResult) {
         if (authResult['status']['signed_in']) {
             $http.post('http://localhost:5000/auth/google', {
                 id_token: authResult['id_token']
                 }).
                 success(function(data, status, headers, config) {
-                    alert(data);
+                    taskapi.setToken(data.token);
                 }).
                 error(function(data, status, headers, config) {
-                    alert('error');
+                    taskapi.setToken(null);
                 });
+        } else {
+            taskapi.setToken(null);
         }
     });
 });
@@ -171,41 +177,43 @@ app.directive('arrowNavigable', function() {
     };
 });
 
-function Task(tasklist, text, complete) {
+function Task(changeCallback, id, text, complete) {
+    var priv = {
+        changeCallback: changeCallback,
+        id: id,
+        text: text,
+        complete: complete
+    };
+
     Object.defineProperty(this, 'prev', {
         enumerable: false,
         configurable: false,
-        value: null,
-        writable: true
+        value: this,
+        writable: true,
     });
 
     Object.defineProperty(this, 'next', {
         enumerable: false,
         configurable: false,
-        value: null,
-        writable: true
+        value: this,
+        writable: true,
     });
 
-    Object.defineProperty(this, '_private', {
-        enumerable: false,
+    Object.defineProperty(this, 'id', {
+        enumerable: true,
         configurable: false,
-        value: {
-            tasklist: tasklist,
-            text: text,
-            complete: complete
-        },
-        writable: false
+        get: function() { return priv.id; },
+        set: function(v) { priv.id = v; },
     });
 
     Object.defineProperty(this, 'complete', {
         enumerable: true,
         configurable: false,
-        get: function() { return this._private.complete; },
+        get: function() { return priv.complete; },
         set: function(v) {
-            if (this._private.complete !== v) {
-                var old = this._private.complete;
-                this._private.complete = v;
-                this._private.tasklist.submitChange(this, 'complete', old, v);
+            if (priv.complete !== v) {
+                priv.complete = v;
+                priv.changeCallback(this);
             }
         }
     });
@@ -213,12 +221,11 @@ function Task(tasklist, text, complete) {
     Object.defineProperty(this, 'text', {
         enumerable: true,
         configurable: false,
-        get: function() { return this._private.text; },
+        get: function() { return priv.text; },
         set: function(v) {
-            if (this._private.text !== v) {
-                var old = this._private.text;
-                this._private.text = v;
-                this._private.tasklist.submitChange(this, 'text', old, v);
+            if (priv.text !== v) {
+                priv.text = v;
+                priv.changeCallback(this);
             }
         }
     });
@@ -237,99 +244,349 @@ function Filter(completeOnly) {
     };
 }
 
-function Tasklist(filter) {
-    this.taskhead = new ListHead();
+function EventEmitter() {
+    var regs = {};
+    var paused = {};
 
+    this.$on = function(event, handler) {
+        if (event in regs) {
+            regs[event].push(handler);
+        } else {
+            regs[event] = [handler];
+            paused[event] = false;
+        }
+
+        return function() {
+            var pos = regs[event].indexOf(handler);
+            if (pos >= 0)
+                regs.splice(pos, 1);
+        }
+    };
+
+    this.$emit = function(event) {
+        if (event in regs && !paused[event]) {
+            var eventArgs = arguments;
+            regs[event].forEach(function(handler) {
+                handler.apply(handler, eventArgs);
+            });
+        }
+    }
+
+    this.$pause = function(event) {
+        paused[event] = true;
+    };
+
+    this.$unpause = function(event) {
+        paused[event] = false;
+    };
+}
+
+function Tasklist() {
+    var priv = {
+        head: new ListHead(),
+        task_map: {},
+        next_id: -1,
+        suppress_events: false,
+        events: new EventEmitter(),
+        };
+
+    this.events = priv.events;
+
+    Object.defineProperty(this, 'sentinel', {
+        enumerable: false,
+        configurable: false,
+        get: function() { return priv.head; },
+    });
+
+    function onChange() {
+        if (!priv.suppress_events)
+            priv.events.$emit('change');
+    }
+
+    this.insertAfter = function(task, base) {
+        task.prev.next = task.next;
+        task.next.prev = task.prev;
+        task.prev = base;
+        task.next = base.next;
+        task.prev.next = task;
+        task.next.prev = task;
+        onChange();
+    };
+
+    this.insertBefore = function(task, base) {
+        task.prev.next = task.next;
+        task.next.prev = task.prev;
+        task.next = base;
+        task.prev = base.prev;
+        task.next.prev = task;
+        task.prev.next = task;
+        onChange();
+    };
+
+    this.addTask = function(text, complete) {
+        var task = new Task(onChange, priv.next_id--, text, complete);
+        priv.task_map[task.id] = task;
+        this.insertAfter(task, priv.head);
+        return task;
+    };
+
+    function _remove(task) {
+        var res = task.next;
+        task.prev.next = task.next;
+        task.next.prev = task.prev;
+        delete priv.task_map[task.id];
+        return res;
+    }
+
+    this.remove = function(task) {
+        _remove(task);
+        onChange();
+    };
+
+    function _clear() {
+        var cur = priv.head.next;
+        while (cur != priv.head) {
+            cur = _remove(cur);
+        }
+    }
+
+    this.clear = function() {
+        _clear();
+        onChange();
+    };
+
+    this.load = function(tasks) {
+        this.suppress_events = true;
+
+        var newHead = new ListHead();
+        var newTaskmap = {};
+
+        tasks.forEach(function(t) {
+            var curTask;
+            if (t.id in priv.task_map) {
+                curTask = priv.task_map[t.id];
+                curTask.text = t.text;
+                curTask.complete = t.complete;
+            } else {
+                curTask = new Task(onChange, t.id, t.text, t.complete);
+            }
+
+            newTaskmap[curTask.id] = curTask;
+            curTask.prev = newHead.prev;
+            curTask.next = newHead;
+            newHead.prev = curTask;
+            curTask.prev.next = curTask;
+        });
+
+        priv.head = newHead;
+        priv.task_map = newTaskmap;
+        this.suppress_events = false;
+        onChange();
+    };
+
+    this.forEach = function(callback, thisArg) {
+        var cur = priv.head.next;
+        while (cur != priv.head) {
+            callback.call(thisArg, cur);
+            cur = cur.next;
+        }
+    };
+
+    this.remap_ids = function(m) {
+        m.forEach(function(mp) {
+            var prev_id = mp[0];
+            var new_id = mp[1];
+
+            var task = priv.task_map[prev_id];
+            task.id = new_id;
+            priv.task_map[new_id] = task;
+            delete priv.task_map[prev_id];
+        }, this);
+    };
+
+    this.toJson = function() {
+        var res = [];
+
+        var cur = priv.head.next;
+        while (cur !== priv.head) {
+            res.push(cur);
+            cur = cur.next;
+        }
+
+        return JSON.stringify(res);
+    };
+}
+
+app.service('taskapi', function($http, $timeout) {
+    var priv = {
+        token: null,
+        tasklist: new Tasklist(),
+        tasklist_version: null,
+        load_timeout_promise: null,
+        store_scheduled: false,
+        store_in_progress: false,
+        suppress_store: false,
+        };
+
+    Object.defineProperty(this, 'tasklist', {
+        enumerable: false,
+        configurable: false,
+        get: function() { return priv.tasklist; },
+    });
+
+    function load_from_server() {
+        priv.load_timeout_promise = null;
+        $http.get('http://localhost:5000/tasks', {
+            headers: { 'Authorization': 'Bearer ' + priv.token }
+            })
+            .success(function(data) {
+                if (priv.tasklist_version === null || priv.tasklist_version < data.version) {
+                    priv.tasklist_version = data.version;
+                    priv.suppress_store = true;
+                    priv.tasklist.load(data.tasks);
+                    priv.suppress_store = false;
+                }
+                priv.load_timeout_promise = $timeout(load_from_server, 60000);
+            })
+            .error(function() {
+                priv.load_timeout_promise = $timeout(load_from_server, 300000);
+            });
+    }
+
+    function store_to_server() {
+        if (priv.token === null || priv.suppress_store)
+            return;
+
+        priv.store_scheduled = true;
+        if (!priv.store_in_progress) {
+            priv.store_scheduled = false;
+            priv.store_in_progress = true;
+
+            var ser = [];
+            priv.tasklist.forEach(function(task) {
+                ser.push(task);
+            }, this);
+
+            var data = {
+                tasks: ser,
+                };
+            $http.put('http://localhost:5000/tasks', data, {
+                headers: { 'Authorization': 'Bearer ' + priv.token }
+                })
+                .success(function(data) {
+                    priv.tasklist.remap_ids(data.id_remap);
+                    priv.store_in_progress = false;
+                    if (priv.store_scheduled)
+                        store_to_server();
+                })
+                .error(function() {
+                    priv.store_in_progress = false;
+                });
+        }
+    }
+
+    this.setToken = function(token) {
+        if (priv.token !== token) {
+            if (priv.load_timeout_promise !== null) {
+                $timeout.cancel(priv.load_timeout_promise);
+                priv.load_timeout_promise = null;
+            }
+
+            priv.token = token;
+            if (token) {
+                load_from_server();
+            } else {
+                priv.tasklist.clear();
+            }
+        }
+    }
+
+    Object.defineProperty(this, 'signedin', {
+        enumerable: true,
+        configurable: false,
+        get: function() {
+            return priv.token !== null;
+        }
+    });
+
+    priv.tasklist.events.$on('change', function() {
+        store_to_server();
+    });
+});
+
+function FilteredTasklist(tasklist, filter) {
+    var priv = {
+        filter: filter,
+        suppress_prefilter: false
+        };
+
+    this.tasklist = tasklist;
     this.filtered = [];
-    this.changes = [];
 
-    var taskhead = this.taskhead;
     var oldSplice = this.filtered.splice;
     this.filtered.splice = function(start, deleteCount) {
         var nextTask;
         if (start + deleteCount < this.length)
             nextTask = this[start + deleteCount];
         else
-            nextTask = taskhead;
+            nextTask = tasklist.sentinel;
 
+        tasklist.events.$pause('change');
         for (var i = 2; i < arguments.length; ++i) {
             var cur = arguments[i];
-
-            cur.prev.next = cur.next;
-            cur.next.prev = cur.prev;
-
-            cur.next = nextTask;
-            cur.prev = nextTask.prev;
-            nextTask.prev = cur;
-            cur.prev.next = cur;
+            tasklist.insertBefore(cur, nextTask);
         }
+        tasklist.events.$unpause('change');
+        priv.suppress_prefilter = true;
+        tasklist.events.$emit('change');
+        priv.suppress_prefilter = false;
 
         return oldSplice.apply(this, arguments);
     };
 
-    this._filter = filter;
     Object.defineProperty(this, 'filter', {
         enumerable: true,
         configurable: false,
-        get: function() { return this._filter; },
+        get: function() { return priv.filter; },
         set: function(v) {
-            this._filter = v;
+            priv.filter = v;
             this.prefilter();
         }
     });
 
     this.prefilter = function() {
-        this.filtered.splice(0, this.filtered.length);
-        var cur = this.taskhead.next;
-        while (cur !== this.taskhead) {
-            if (!this._filter || this._filter.matches(cur))
+        oldSplice.call(this.filtered, 0, this.filtered.length);
+        var cur = tasklist.sentinel.next;
+        while (cur !== tasklist.sentinel) {
+            if (!priv.filter || priv.filter.matches(cur))
                 this.filtered.push(cur);
             cur = cur.next;
         }
     };
 
-    this.submitChange = function(task, prop, before, after) {
-        this.changes.push([task, prop, before, after]);
-        this.prefilter();
-    };
-
     this.addTask = function(text, complete) {
-        var task = new Task(this, text, complete);
-
-        task.prev = this.taskhead;
-        task.next = this.taskhead.next;
-        this.taskhead.next = task;
-        task.next.prev = task;
-
-        if (!this._filter || this._filter.matches(task))
-            this.filtered.unshift(task);
-        return task;
+        return this.tasklist.addTask(text, complete);
     };
 
     this.toJson = function() {
-        var res = [];
-
-        var cur = this.taskhead.next;
-        while (cur !== this.taskhead) {
-            res.push(cur);
-            cur = cur.next;
-        }
-
-        return res;
+        return JSON.stringify(this.filtered);
     };
+
+    var self = this;
+    this.tasklist.events.$on('change', function() {
+        if (!priv.suppress_prefilter)
+            self.prefilter();
+    });
 }
 
-app.controller('tasklistController', function($scope, gsignin) {
+app.controller('tasklistController', function($scope, gsignin, taskapi) {
     $scope.filters = {
         Next: new Filter(true),
         All: new Filter(false)
     };
 
-    $scope.tasklist = new Tasklist($scope.filters.Next);
-
-    $scope.tasklist.addTask('c', false);
-    $scope.tasklist.addTask('b', true);
-    $scope.tasklist.addTask('a', false);
+    $scope.raw_tasklist = taskapi.tasklist;
+    $scope.tasklist = new FilteredTasklist($scope.raw_tasklist, $scope.filters.Next);
 
     Object.defineProperty($scope, 'filter', {
         enumerable: true,
@@ -357,4 +614,5 @@ app.controller('tasklistController', function($scope, gsignin) {
     };
 
     $scope.gapi = gsignin;
+    $scope.taskapi = taskapi;
 });
