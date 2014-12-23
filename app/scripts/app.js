@@ -9,6 +9,7 @@ app.provider('gsignin', function() {
         };
 
         function authCallback(authResult) {
+            console.log(authResult.status.signed_in);
             $timeout(function() {
                 if (authResult['status']['signed_in']) {
                     priv.id_token = authResult['id_token'];
