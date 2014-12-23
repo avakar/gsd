@@ -1,11 +1,11 @@
-from flask import Flask, request, abort, make_response
+from flask import Flask, request, abort, make_response, send_from_directory
 import flask_cors, oauth2, jwt, psycopg2, json, time
 
 jwt_secret = 'asdfavradfdasf'
 
 class Conn:
     def __init__(self):
-        self.conn = psycopg2.connect(database='gsd', user='avakar', password='wRu48NhM', host='ratatanek.cz')
+        self.conn = psycopg2.connect(database='gsd', user='avakar', password='wRu48NhM')
         self.cur = self.conn.cursor()
 
     def __enter__(self):
@@ -27,10 +27,6 @@ app = Flask(__name__)
 app.config['CORS_HEADERS'] = ['content-type', 'authorization']
 app.config['CORS_METHODS'] = ['GET', 'POST', 'PUT']
 flask_cors.CORS(app)
-
-@app.route('/')
-def index():
-    return 'Hello world'
 
 def authorize():
     toks = request.headers.get('authorization', '').split(' ')
@@ -113,6 +109,15 @@ def google_auth():
     resp.headers['content-type'] = 'application/json'
     return resp
 
+@app.route('/bower_components/<path:filename>')
+def bower_files(filename):
+    return send_from_directory('../bower_components', filename)
+
+@app.route('/', defaults={'filename': 'index.html'})
+@app.route('/<path:filename>')
+def static_files(filename):
+    return send_from_directory('../app', filename)
+
 if __name__ == '__main__':
-    app.debug = True
-    app.run()
+    #app.debug = True
+    app.run(host='0.0.0.0', port=5000)
