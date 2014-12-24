@@ -9,7 +9,6 @@
     <!-- build:css(.) styles/vendor.css -->
     <!-- bower:css -->
     <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css" />
-    <link rel="stylesheet" href="bower_components/angular-taglist/css/angular-taglist-directive.css" />
     <!-- endbower -->
     <!-- endbuild -->
     <!-- build:css(.tmp) styles/main.css -->
@@ -40,18 +39,26 @@
             <li ng-repeat="entry in tasklist.filtered" class="item">
                 <div class="drag-handle"></div>
                 <input class="item-complete" type="checkbox" ng-model="entry.complete">
+                <a href="" ng-click="deleteTask(entry)" class="item-edit">
+                    <img src="/images/item-delete.png">
+                </a>
+                <a href="" ng-click="editTask(entry)" class="item-edit" ng-hide="currentEditedTask">
+                    <img src="/images/item-edit.png">
+                </a>
+                <span class="item-tags" ng-click="editTask(entry)" ng-hide="currentEditedTask">
+                    <span class="item-tag" ng-repeat="tag in entry.tags">{{tag}}</span>
+                </span>
+                <div class="item-edit-box" ng-show="currentEditedTask">
+                    <input type="text" ng-model="entry.proptext" ng-blur="finishEdit()">
+                </div>
                 <div class="item-text">
                     <input class="item-text-input" type="text" ng-model="entry.text" arrow-navigable>
                 </div>
-                <span class="item-tags">
-                    <span class="item-tag" ng-repeat="tag in entry.tags">{{tag}}</span>
-                </span>
             </li>
         </ul>
     </div>
 
     <pre>{{serializeTasklist()}}</pre>
-    <pre>{{raw_tasklist.toJson()}}</pre>
 
     <!-- build:js(.) scripts/vendor.js -->
     <!-- bower:js -->

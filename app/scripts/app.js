@@ -185,6 +185,7 @@ function Task(changeCallback, id, text, complete) {
         text: text,
         complete: complete,
         tags: [],
+        proptext: '',
     };
 
     Object.defineProperty(this, 'prev', {
@@ -237,6 +238,39 @@ function Task(changeCallback, id, text, complete) {
         configurable: false,
         get: function() { return priv.tags; },
     });
+
+    Object.defineProperty(this, 'proptext', {
+        enumerable: false,
+        configurable: false,
+        get: function() { return priv.proptext; },
+        set: function(v) {
+            priv.proptext = v;
+
+            var comps = v.split(' ');
+            var state = {
+                cur: null,
+                newTags: [],
+                };
+            comps.forEach(function(comp) {
+                if (comp.length > 0 && comp[0] == '@') {
+                    if (state.cur)
+                        state.newTags.push(state.cur);
+                    state.cur = comp.substr(1);
+                } else {
+                    if (state.cur !== null)
+                        state.cur = state.cur + ' ' + comp;
+                }
+            });
+            if (state.cur)
+                state.newTags.push(state.cur);
+            priv.tags = state.newTags;
+            changeCallback(this);
+        },
+    });
+
+    this.refreshProptext = function() {
+        priv.proptext = priv.tags.length? '@' + priv.tags.join(' @'): '';
+    }
 
     this.addTag = function(tag) {
         if (priv.tags.indexOf(tag) === -1) {
@@ -379,7 +413,7 @@ function Tasklist() {
     };
 
     this.load = function(tasks) {
-        this.suppress_events = true;
+        priv.suppress_events = true;
 
         var newHead = new ListHead();
         var newTaskmap = {};
@@ -410,7 +444,8 @@ function Tasklist() {
 
         priv.head = newHead;
         priv.task_map = newTaskmap;
-        this.suppress_events = false;
+        this.verify();
+        priv.suppress_events = false;
         onChange();
     };
 
@@ -444,6 +479,25 @@ function Tasklist() {
         }
 
         return angular.toJson(res);
+    };
+
+    this.verify = function() {
+        var prev = priv.head;
+        var cur = prev.next;
+
+        if (cur.prev !== prev || prev.next !== cur) {
+            alert('whoops');
+        }
+
+        var count = 0;
+        while (cur !== priv.head) {
+            ++count;
+            if (count > 10 || cur.prev !== prev || prev.next !== cur) {
+                alert('whoops');
+            }
+            prev = cur;
+            cur = cur.next;
+        }
     };
 }
 
@@ -644,6 +698,29 @@ app.controller('tasklistController', function($scope, gsignin, taskapi) {
         gsignin.signout();
     };
 
+    $scope.editTask = function(task) {
+        if (!this.currentEditedTask) {
+            task.refreshProptext();
+            this.currentEditedTask = task;
+        } else {
+            this.currentEditedTask = null;
+        }
+    };
+
+    $scope.finishEdit = function() {
+        this.currentEditedTask = null;
+    }
+
+    $scope.deleteTask = function(task) {
+        taskapi.tasklist.remove(task);
+    };
+
+    $scope.currentEditedTask = null;
+
     $scope.gapi = gsignin;
     $scope.taskapi = taskapi;
+
+    $scope.verify = function() {
+        taskapi.tasklist.verify();
+    };
 });

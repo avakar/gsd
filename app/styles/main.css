@@ -2,6 +2,9 @@
 body {
   padding-top: 20px;
   padding-bottom: 20px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* Everything but the jumbotron gets side spacing for mobile first views */
@@ -80,10 +83,10 @@ body {
 
 #tasklist {
     list-style: none outside none;
+    padding: 1em;
 }
 
 #tasklist .item {
-    width: 100%;
     height: 1.6em;
     padding: 0px;
     margin: 5px 0;
@@ -113,12 +116,25 @@ body {
 
 #tasklist .item .item-tags {
     float: right;
-    margin-right: 2em;
+    margin-left: 1em;
+    margin-right: 1em;
 }
 
 #tasklist .item .item-tag {
-    font-size: smaller;
-    color: #5585A4;
+    font-size: x-small;
+    color: #E2EFF8;
+    background-color: #386C8E;
+    border-radius: 5px;
+    padding: 3px;
+}
+
+#tasklist .item .item-edit {
+    float: right;
+    visibility: hidden;
+}
+
+#tasklist .item:hover .item-edit {
+    visibility: visible;
 }
 
 #tasklist .item .drag-handle {
@@ -128,4 +144,8 @@ body {
     width: 1em;
     margin-right: 0.3em;
     background: repeating-linear-gradient(#83AECA, #83AECA 1px, #e9f2f9 1px, #e9f2f9 2px);
+}
+
+#tasklist .item .item-edit-box {
+    float: right;
 }
