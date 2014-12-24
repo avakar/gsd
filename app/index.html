@@ -9,6 +9,7 @@
     <!-- build:css(.) styles/vendor.css -->
     <!-- bower:css -->
     <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css" />
+    <link rel="stylesheet" href="bower_components/angular-taglist/css/angular-taglist-directive.css" />
     <!-- endbower -->
     <!-- endbuild -->
     <!-- build:css(.tmp) styles/main.css -->
@@ -38,8 +39,13 @@
         <ul ui-sortable="sortableOptions" id="tasklist" ng-model="tasklist.filtered">
             <li ng-repeat="entry in tasklist.filtered" class="item">
                 <div class="drag-handle"></div>
-                <input type="checkbox" ng-model="entry.complete">
-                <input class="item-text" type="text" ng-model="entry.text" arrow-navigable>
+                <input class="item-complete" type="checkbox" ng-model="entry.complete">
+                <div class="item-text">
+                    <input class="item-text-input" type="text" ng-model="entry.text" arrow-navigable>
+                </div>
+                <span class="item-tags">
+                    <span class="item-tag" ng-repeat="tag in entry.tags">{{tag}}</span>
+                </span>
             </li>
         </ul>
     </div>
@@ -58,6 +64,7 @@
     <script src="bower_components/jquery-ui/jquery-ui.js"></script>
     <script src="bower_components/angular-ui-sortable/sortable.js"></script>
     <script src="bower_components/angular-ui-utils/keypress.js"></script>
+    <script src="bower_components/angular-taglist/js/angular-taglist-directive.js"></script>
     <!-- endbower -->
     <!-- endbuild -->
 

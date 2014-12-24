@@ -1,6 +1,6 @@
 'use strict';
 
-var app = angular.module('myapp2App', ['ui.bootstrap', 'ui.sortable', 'ui.keypress']);
+var app = angular.module('myapp2App', ['ui.bootstrap', 'ui.sortable', 'ui.keypress', 'angular_taglist_directive']);
 
 app.provider('gsignin', function() {
     function Gsignin($rootScope, $timeout, provider) {
@@ -390,13 +390,15 @@ function Tasklist() {
                 curTask = priv.task_map[t.id];
                 curTask.text = t.text;
                 curTask.complete = t.complete;
-                if ('tags' in t) {
-                    t.tags.forEach(function(tag) {
-                        curTask.addTag(tag);
-                    });
-                }
+                curTask.tags.splice(0, curTask.tags.length);
             } else {
                 curTask = new Task(onChange, t.id, t.text, t.complete);
+            }
+
+            if ('tags' in t) {
+                t.tags.forEach(function(tag) {
+                    curTask.addTag(tag);
+                });
             }
 
             newTaskmap[curTask.id] = curTask;

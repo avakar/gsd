@@ -8,7 +8,8 @@
     "bootstrap": "^3.2.0",
     "angular-bootstrap": "~0.12.0",
     "angular-ui-sortable": "~0.13.1",
-    "angular-ui-utils": "bower-keypress"
+    "angular-ui-utils": "bower-keypress",
+    "angular-taglist": "~0.1.5"
   },
   "devDependencies": {},
   "appPath": "app"
