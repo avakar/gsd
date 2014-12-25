@@ -37,8 +37,8 @@
 
         <ul ui-sortable="sortableOptions" id="tasklist" ng-model="tasklist.filtered">
             <li ng-repeat="entry in tasklist.filtered" class="item">
+                <div class="drag-handle"></div>
                 <div inline-edit-context="{ get: 'entry.getDescriptor()', set: 'entry.applyDescriptor($value)'}">
-                    <div class="drag-handle"></div>
                     <input class="item-complete" type="checkbox" ng-model="entry.complete">
 
                     <img src="/images/item-delete.png" ng-click="deleteTask(entry)" class="item-edit">
