@@ -122,6 +122,18 @@ body {
 
 #tasklist .item .item-tag {
     font-size: x-small;
+    color: red;
+    margin: 0.5em;
+}
+
+#tasklist .item .item-contexts {
+    float: right;
+    margin-left: 0px;
+    margin-right: 0px;
+}
+
+#tasklist .item .item-context {
+    font-size: x-small;
     color: #E2EFF8;
     background-color: #386C8E;
     border-radius: 5px;

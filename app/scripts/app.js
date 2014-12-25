@@ -178,13 +178,14 @@ app.directive('arrowNavigable', function() {
     };
 });
 
-function Task(changeCallback, id, text, complete) {
+function Task(changeCallback, textAndDesc) {
     var priv = {
         changeCallback: changeCallback,
-        id: id,
-        text: text,
-        complete: complete,
+        id: 0,
+        text: '',
+        complete: false,
         tags: [],
+        contexts: [],
     };
 
     Object.defineProperty(this, 'prev', {
@@ -238,30 +239,88 @@ function Task(changeCallback, id, text, complete) {
         get: function() { return priv.tags; },
     });
 
+    Object.defineProperty(this, 'contexts', {
+        enumerable: true,
+        configurable: false,
+        get: function() { return priv.contexts; },
+    });
+
+    this.load = function(t) {
+        priv.id = t.id;
+        priv.text = t.text;
+        priv.complete = t.complete;
+        var newTags = [];
+        if ('tags' in t) {
+            t.tags.forEach(function(tag) {
+                newTags.push(tag);
+            });
+        }
+        var newCtxs = [];
+        if ('contexts' in t) {
+            t.contexts.forEach(function(ctx) {
+                newCtxs.push(ctx);
+            });
+        }
+        newTags.sort();
+        newCtxs.sort();
+        priv.tags = jQuery.unique(newTags);
+        priv.contexts = jQuery.unique(newCtxs);
+        priv.changeCallback(this);
+    };
+
+    this.store = function() {
+        return this;
+    };
+
     this.applyDescriptor = function(desc) {
         var comps = desc.split(' ');
         var state = {
-            cur: null,
+            cur: '',
+            kind: 0,
             newTags: [],
+            newCtxs: [],
             };
+
+        function addPart() {
+            switch (state.kind) {
+            case 1:
+                state.newTags.push(state.cur);
+                break;
+            case 2:
+                state.newCtxs.push(state.cur);
+                break;
+            }
+        }
+
         comps.forEach(function(comp) {
-            if (comp.length > 0 && comp[0] == '@') {
-                if (state.cur)
-                    state.newTags.push(state.cur);
+            if (comp.length > 0 && comp[0] == '#') {
+                addPart();
+                state.kind = 1;
+                state.cur = comp.substr(1);
+            } else if (comp.length > 0 && comp[0] == '@') {
+                addPart();
+                state.kind = 2;
                 state.cur = comp.substr(1);
             } else {
-                if (state.cur !== null)
-                    state.cur = state.cur + ' ' + comp;
+                state.cur = state.cur + ' ' + comp;
             }
         });
-        if (state.cur)
-            state.newTags.push(state.cur);
-        priv.tags = state.newTags;
+
+        addPart();
+        state.newTags.sort();
+        state.newCtxs.sort();
+        priv.tags = jQuery.unique(state.newTags);
+        priv.contexts = jQuery.unique(state.newCtxs);
         changeCallback(this);
     };
 
     this.getDescriptor = function() {
-        return priv.tags.length? '@' + priv.tags.join(' @'): '';
+        var parts = [];
+        if (priv.tags.length)
+            parts.push('#' + priv.tags.join(' #'));
+        if (priv.contexts.length)
+            parts.push('@' + priv.contexts.join(' @'));
+        return parts.join(' ');
     }
 
     this.addTag = function(tag) {
@@ -278,6 +337,8 @@ function Task(changeCallback, id, text, complete) {
             priv.changeCallback(this);
         }
     };
+
+    // XXX: parse textAndDescriptor
 }
 
 function ListHead() {
@@ -372,8 +433,8 @@ function Tasklist() {
         onChange();
     };
 
-    this.addTask = function(text, complete) {
-        var task = new Task(onChange, priv.next_id--, text, complete);
+    this.addTask = function(textAndDesc) {
+        var task = new Task(onChange, textAndDesc);
         priv.task_map[task.id] = task;
         this.insertAfter(task, priv.head);
         return task;
@@ -414,18 +475,11 @@ function Tasklist() {
             var curTask;
             if (t.id in priv.task_map) {
                 curTask = priv.task_map[t.id];
-                curTask.text = t.text;
-                curTask.complete = t.complete;
-                curTask.tags.splice(0, curTask.tags.length);
             } else {
-                curTask = new Task(onChange, t.id, t.text, t.complete);
+                curTask = new Task(onChange);
             }
 
-            if ('tags' in t) {
-                t.tags.forEach(function(tag) {
-                    curTask.addTag(tag);
-                });
-            }
+            curTask.load(t);
 
             newTaskmap[curTask.id] = curTask;
             curTask.prev = newHead.prev;
@@ -439,6 +493,14 @@ function Tasklist() {
         this.verify();
         priv.suppress_events = false;
         onChange();
+    };
+
+    this.store = function() {
+        var res = [];
+        this.forEach(function(task) {
+            res.push(task.store());
+        });
+        return res;
     };
 
     this.forEach = function(callback, thisArg) {
@@ -538,13 +600,8 @@ app.service('taskapi', function($http, $timeout) {
             priv.store_scheduled = false;
             priv.store_in_progress = true;
 
-            var ser = [];
-            priv.tasklist.forEach(function(task) {
-                ser.push(task);
-            }, this);
-
             var data = {
-                tasks: ser,
+                tasks: priv.tasklist.store(),
                 };
             $http.put('http://ratatanek.cz:5000/tasks', data, {
                 headers: { 'Authorization': 'Bearer ' + priv.token }
@@ -641,8 +698,8 @@ function FilteredTasklist(tasklist, filter) {
         }
     };
 
-    this.addTask = function(text, complete) {
-        return this.tasklist.addTask(text, complete);
+    this.addTask = function(textAndDesc) {
+        return this.tasklist.addTask(textAndDesc);
     };
 
     this.toJson = function() {
@@ -741,16 +798,6 @@ app.directive('inlineEditContext', function() {
                 }
             });
         },
-/*        link: function(scope, element, attrs) {
-            scope.editting = false;
-            scope.beginEdit = function() {
-                for (var input in scope.editInputs) {
-                    input.show();
-                    input.focus();
-                }
-            };
-            scope.editInputs = []
-        },*/
     };
 });
 

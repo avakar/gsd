@@ -42,9 +42,12 @@
                     <input class="item-complete" type="checkbox" ng-model="entry.complete">
 
                     <img src="/images/item-delete.png" ng-click="deleteTask(entry)" class="item-edit">
-                    <img class="item-edit" ng-click="beginEdit()" ng-hide="editting || entry.tags.length" src="/images/item-edit.png">
+                    <img class="item-edit" ng-click="beginEdit()" ng-hide="editting || entry.tags.length || entry.contexts.length" src="/images/item-edit.png">
+                    <span class="item-contexts" ng-click="beginEdit()" ng-hide="editting">
+                        <span class="item-context" ng-repeat="ctx in entry.contexts">{{ctx}}</span>
+                    </span>
                     <span class="item-tags" ng-click="beginEdit()" ng-hide="editting">
-                        <span class="item-tag" ng-repeat="tag in entry.tags">{{tag}}</span>
+                        <span class="item-tag" ng-repeat="tag in entry.tags">#{{tag}}</span>
                     </span>
                     <input class="item-edit-box" inline-edit-input type="text">
 
