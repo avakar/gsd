@@ -178,10 +178,10 @@ app.directive('arrowNavigable', function() {
     };
 });
 
-function Task(changeCallback, textAndDesc) {
+function Task(changeCallback, id, textAndDesc) {
     var priv = {
         changeCallback: changeCallback,
-        id: 0,
+        id: id,
         text: '',
         complete: false,
         tags: [],
@@ -275,19 +275,24 @@ function Task(changeCallback, textAndDesc) {
     this.applyDescriptor = function(desc) {
         var comps = desc.split(' ');
         var state = {
-            cur: '',
+            cur: [],
             kind: 0,
+            prefix: '',
             newTags: [],
             newCtxs: [],
             };
 
         function addPart() {
+            var cur = state.cur.join(' ');
             switch (state.kind) {
+            case 0:
+                state.prefix = cur;
+                break;
             case 1:
-                state.newTags.push(state.cur);
+                state.newTags.push(cur);
                 break;
             case 2:
-                state.newCtxs.push(state.cur);
+                state.newCtxs.push(cur);
                 break;
             }
         }
@@ -296,13 +301,13 @@ function Task(changeCallback, textAndDesc) {
             if (comp.length > 0 && comp[0] == '#') {
                 addPart();
                 state.kind = 1;
-                state.cur = comp.substr(1);
+                state.cur = [comp.substr(1)];
             } else if (comp.length > 0 && comp[0] == '@') {
                 addPart();
                 state.kind = 2;
-                state.cur = comp.substr(1);
+                state.cur = [comp.substr(1)];
             } else {
-                state.cur = state.cur + ' ' + comp;
+                state.cur.push(comp);
             }
         });
 
@@ -312,6 +317,7 @@ function Task(changeCallback, textAndDesc) {
         priv.tags = jQuery.unique(state.newTags);
         priv.contexts = jQuery.unique(state.newCtxs);
         changeCallback(this);
+        return state.prefix;
     };
 
     this.getDescriptor = function() {
@@ -338,7 +344,10 @@ function Task(changeCallback, textAndDesc) {
         }
     };
 
-    // XXX: parse textAndDescriptor
+    if (textAndDesc) {
+        var prefix = this.applyDescriptor(textAndDesc);
+        priv.text = prefix;
+    }
 }
 
 function ListHead() {
@@ -434,7 +443,7 @@ function Tasklist() {
     };
 
     this.addTask = function(textAndDesc) {
-        var task = new Task(onChange, textAndDesc);
+        var task = new Task(onChange, priv.next_id--, textAndDesc);
         priv.task_map[task.id] = task;
         this.insertAfter(task, priv.head);
         return task;
@@ -476,7 +485,7 @@ function Tasklist() {
             if (t.id in priv.task_map) {
                 curTask = priv.task_map[t.id];
             } else {
-                curTask = new Task(onChange);
+                curTask = new Task(onChange, null);
             }
 
             curTask.load(t);
@@ -808,14 +817,19 @@ app.directive('inlineEditInput', function($document, $rootScope) {
             var active = false;
             var previousFocus = null;
 
+            function refocus() {
+                if (previousFocus) {
+                    previousFocus.focus();
+                    previousFocus = null;
+                }
+            }
+
             function complete() {
                 if (active) {
                     $rootScope.$apply(function() {
                         context.completeEdit(element, element.val());
                     });
                     element.hide();
-                    if (previousFocus)
-                        previousFocus.focus();
                     active = false;
                 }
             }
@@ -826,8 +840,6 @@ app.directive('inlineEditInput', function($document, $rootScope) {
                         context.cancelEdit(element);
                     });
                     element.hide();
-                    if (previousFocus)
-                        previousFocus.focus();
                     active = false;
                 }
             }
@@ -849,9 +861,11 @@ app.directive('inlineEditInput', function($document, $rootScope) {
                 switch (event.keyCode) {
                 case 13:
                     complete();
+                    refocus();
                     break;
                 case 27:
                     cancelEdit();
+                    refocus();
                     break;
                 }
             });
