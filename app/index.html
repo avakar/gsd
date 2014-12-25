@@ -37,22 +37,20 @@
 
         <ul ui-sortable="sortableOptions" id="tasklist" ng-model="tasklist.filtered">
             <li ng-repeat="entry in tasklist.filtered" class="item">
-                <div class="drag-handle"></div>
-                <input class="item-complete" type="checkbox" ng-model="entry.complete">
-                <a href="" ng-click="deleteTask(entry)" class="item-edit">
-                    <img src="/images/item-delete.png">
-                </a>
-                <a href="" ng-click="editTask(entry)" class="item-edit" ng-hide="currentEditedTask">
-                    <img src="/images/item-edit.png">
-                </a>
-                <span class="item-tags" ng-click="editTask(entry)" ng-hide="currentEditedTask">
-                    <span class="item-tag" ng-repeat="tag in entry.tags">{{tag}}</span>
-                </span>
-                <div class="item-edit-box" ng-show="currentEditedTask">
-                    <input type="text" ng-model="entry.proptext" ng-blur="finishEdit()">
-                </div>
-                <div class="item-text">
-                    <input class="item-text-input" type="text" ng-model="entry.text" arrow-navigable>
+                <div inline-edit-context="{ get: 'entry.getDescriptor()', set: 'entry.applyDescriptor($value)'}">
+                    <div class="drag-handle"></div>
+                    <input class="item-complete" type="checkbox" ng-model="entry.complete">
+
+                    <img src="/images/item-delete.png" ng-click="deleteTask(entry)" class="item-edit">
+                    <img class="item-edit" ng-click="beginEdit()" ng-hide="editting || entry.tags.length" src="/images/item-edit.png">
+                    <span class="item-tags" ng-click="beginEdit()" ng-hide="editting">
+                        <span class="item-tag" ng-repeat="tag in entry.tags">{{tag}}</span>
+                    </span>
+                    <input class="item-edit-box" inline-edit-input type="text">
+
+                    <div class="item-text">
+                        <input class="item-text-input" type="text" ng-model="entry.text" arrow-navigable>
+                    </div>
                 </div>
             </li>
         </ul>

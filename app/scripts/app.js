@@ -185,7 +185,6 @@ function Task(changeCallback, id, text, complete) {
         text: text,
         complete: complete,
         tags: [],
-        proptext: '',
     };
 
     Object.defineProperty(this, 'prev', {
@@ -239,37 +238,30 @@ function Task(changeCallback, id, text, complete) {
         get: function() { return priv.tags; },
     });
 
-    Object.defineProperty(this, 'proptext', {
-        enumerable: false,
-        configurable: false,
-        get: function() { return priv.proptext; },
-        set: function(v) {
-            priv.proptext = v;
+    this.applyDescriptor = function(desc) {
+        var comps = desc.split(' ');
+        var state = {
+            cur: null,
+            newTags: [],
+            };
+        comps.forEach(function(comp) {
+            if (comp.length > 0 && comp[0] == '@') {
+                if (state.cur)
+                    state.newTags.push(state.cur);
+                state.cur = comp.substr(1);
+            } else {
+                if (state.cur !== null)
+                    state.cur = state.cur + ' ' + comp;
+            }
+        });
+        if (state.cur)
+            state.newTags.push(state.cur);
+        priv.tags = state.newTags;
+        changeCallback(this);
+    };
 
-            var comps = v.split(' ');
-            var state = {
-                cur: null,
-                newTags: [],
-                };
-            comps.forEach(function(comp) {
-                if (comp.length > 0 && comp[0] == '@') {
-                    if (state.cur)
-                        state.newTags.push(state.cur);
-                    state.cur = comp.substr(1);
-                } else {
-                    if (state.cur !== null)
-                        state.cur = state.cur + ' ' + comp;
-                }
-            });
-            if (state.cur)
-                state.newTags.push(state.cur);
-            priv.tags = state.newTags;
-            changeCallback(this);
-        },
-    });
-
-    this.refreshProptext = function() {
-        priv.proptext = priv.tags.length? '@' + priv.tags.join(' @'): '';
+    this.getDescriptor = function() {
+        return priv.tags.length? '@' + priv.tags.join(' @'): '';
     }
 
     this.addTag = function(tag) {
@@ -698,29 +690,127 @@ app.controller('tasklistController', function($scope, gsignin, taskapi) {
         gsignin.signout();
     };
 
-    $scope.editTask = function(task) {
-        if (!this.currentEditedTask) {
-            task.refreshProptext();
-            this.currentEditedTask = task;
-        } else {
-            this.currentEditedTask = null;
-        }
-    };
-
-    $scope.finishEdit = function() {
-        this.currentEditedTask = null;
-    }
-
     $scope.deleteTask = function(task) {
         taskapi.tasklist.remove(task);
     };
-
-    $scope.currentEditedTask = null;
 
     $scope.gapi = gsignin;
     $scope.taskapi = taskapi;
 
     $scope.verify = function() {
         taskapi.tasklist.verify();
+    };
+});
+
+app.directive('inlineEditContext', function() {
+    var completionAction;
+    return {
+        scope: true,
+        controller: function($scope) {
+            var registeredInputs = [];
+
+            $scope.editting = false;
+            $scope.beginEdit = function() {
+                var initial = $scope.$eval(completionAction.get);
+                registeredInputs.forEach(function(input) {
+                    input(initial);
+                });
+                $scope.editting = true;
+            };
+            this.registerInput = function(input) {
+                registeredInputs.push(input);
+            };
+
+            this.completeEdit = function(input, value) {
+                $scope.$eval(completionAction.set, {'$value': value});
+                $scope.editting = false;
+            };
+
+            this.cancelEdit = function(input) {
+                $scope.editting = false;
+            };
+        },
+        link: function($scope, element, attrs) {
+            completionAction = $scope.$eval(attrs.inlineEditContext);
+            element.on('keydown', function(event) {
+                if (event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey
+                        && event.keyCode == 13) {
+                    $scope.$apply(function() {
+                        $scope.beginEdit();
+                    });
+                }
+            });
+        },
+/*        link: function(scope, element, attrs) {
+            scope.editting = false;
+            scope.beginEdit = function() {
+                for (var input in scope.editInputs) {
+                    input.show();
+                    input.focus();
+                }
+            };
+            scope.editInputs = []
+        },*/
+    };
+});
+
+app.directive('inlineEditInput', function($document, $rootScope) {
+    return {
+        require: '^inlineEditContext',
+        link: function(scope, element, attrs, context) {
+            var active = false;
+            var previousFocus = null;
+
+            function complete() {
+                if (active) {
+                    $rootScope.$apply(function() {
+                        context.completeEdit(element, element.val());
+                    });
+                    element.hide();
+                    if (previousFocus)
+                        previousFocus.focus();
+                    active = false;
+                }
+            }
+            
+            function cancelEdit() {
+                if (active) {
+                    $rootScope.$apply(function() {
+                        context.cancelEdit(element);
+                    });
+                    element.hide();
+                    if (previousFocus)
+                        previousFocus.focus();
+                    active = false;
+                }
+            }
+
+            element.hide();
+            context.registerInput(function(startValue) {
+                if (!active) {
+                    previousFocus = $document[0].activeElement;
+                    element.val(startValue);
+                    element.show();
+                    element.focus();
+                    active = true;
+                }
+            });
+            element.on('blur', function() {
+                complete();
+            });
+            element.on('keydown', function(event) {
+                switch (event.keyCode) {
+                case 13:
+                    complete();
+                    break;
+                case 27:
+                    cancelEdit();
+                    break;
+                }
+            });
+            
+            element.on('keypress', function(event) {
+            });
+        },
     };
 });

@@ -117,7 +117,7 @@ body {
 #tasklist .item .item-tags {
     float: right;
     margin-left: 1em;
-    margin-right: 1em;
+    margin-right: 0px;
 }
 
 #tasklist .item .item-tag {
@@ -130,7 +130,13 @@ body {
 
 #tasklist .item .item-edit {
     float: right;
+    cursor: pointer;
     visibility: hidden;
+}
+
+#tasklist .item .item-delete {
+    float: right;
+    cursor: pointer;
 }
 
 #tasklist .item:hover .item-edit {
@@ -148,4 +154,5 @@ body {
 
 #tasklist .item .item-edit-box {
     float: right;
+    width: 60%;
 }
