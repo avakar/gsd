@@ -19,11 +19,6 @@
   <body ng-app="myapp2App" ng-controller="tasklistController">
     <!-- Add your site or application content here -->
 
-    <div ng-cloak>
-        <span ng-if="!taskapi.signedin" gsignin></span>
-        <button ng-if="taskapi.signedin" ng-click="signout()">Sign Out</button>
-    </div>
-
     <div style="width: 10em; float: left">
         <div ng-repeat="(name, f) in filters">
             <label><input type="radio" ng-model="filter" ng-value="f">{{name}}</label>
@@ -34,33 +29,44 @@
     </div>
 
     <div style="overflow: hidden">
-        <input type="text" ui-keypress="{13:'createNewTask($event)'}" placeholder="{{getNewTaskHint()}}" arrow-navigable>
+        <div id="header">
+            <div class="signin-btn" ng-cloak>
+                <span ng-if="!taskapi.signedin" gsignin></span>
+                <button ng-if="taskapi.signedin" ng-click="signout()">Sign Out</button>
+            </div>
+            <div style="overflow:hidden">
+                <input style="width: 100%;" type="text" ui-keypress="{13:'createNewTask($event)'}" placeholder="{{getNewTaskHint()}}" arrow-navigable>
+            </div>
+        </div>
 
-        <ul ui-sortable="sortableOptions" id="tasklist" ng-model="tasklist.filtered">
-            <li ng-repeat="entry in tasklist.filtered" class="item">
-                <div class="drag-handle"></div>
-                <div inline-edit-context="{ get: 'entry.getDescriptor()', set: 'entry.applyDescriptor($value)'}">
-                    <input class="item-complete" type="checkbox" ng-model="entry.complete">
+        <div id="content">
 
-                    <img src="/images/item-delete.png" ng-click="deleteTask(entry)" class="item-edit">
-                    <img class="item-edit" ng-click="beginEdit()" ng-hide="editting || entry.tags.length || entry.contexts.length" src="/images/item-edit.png">
-                    <span class="item-contexts" ng-click="beginEdit()" ng-hide="editting">
-                        <span ng-repeat="ctx in entry.contexts"><span class="item-context" ng-class="getCtxBtnClass(ctx)">{{ctx}}</span></span>
-                    </span>
-                    <span class="item-tags" ng-click="beginEdit()" ng-hide="editting">
-                        <span class="item-tag" ng-repeat="tag in entry.tags">#{{tag}}</span>
-                    </span>
-                    <input class="item-edit-box" inline-edit-input type="text">
+        <div style="overflow: hidden">
+            <ul ui-sortable="sortableOptions" id="tasklist" ng-model="tasklist.filtered">
+                <li ng-repeat="entry in tasklist.filtered" class="item">
+                    <div class="drag-handle"></div>
+                    <div inline-edit-context="{ get: 'entry.getDescriptor()', set: 'entry.applyDescriptor($value)'}">
+                        <input class="item-complete" type="checkbox" ng-model="entry.complete">
 
-                    <div class="item-text">
-                        <input class="item-text-input" type="text" ng-model="entry.text" arrow-navigable>
+                        <img src="/images/item-delete.png" ng-click="deleteTask(entry)" class="item-edit">
+                        <img class="item-edit" ng-click="beginEdit()" ng-hide="editting || entry.tags.length || entry.contexts.length" src="/images/item-edit.png">
+                        <span class="item-contexts" ng-click="beginEdit()" ng-hide="editting">
+                            <span ng-repeat="ctx in entry.contexts"><span class="item-context" ng-class="getCtxBtnClass(ctx)">{{ctx}}</span></span>
+                        </span>
+                        <span class="item-tags" ng-click="beginEdit()" ng-hide="editting">
+                            <span class="item-tag" ng-repeat="tag in entry.tags">#{{tag}}</span>
+                        </span>
+                        <input class="item-edit-box" inline-edit-input type="text">
+
+                        <div class="item-text">
+                            <input class="item-text-input" type="text" ng-model="entry.text" arrow-navigable>
+                        </div>
                     </div>
-                </div>
-            </li>
-        </ul>
+                </li>
+            </ul>
+        </div>
+        <div>
     </div>
-
-    <pre>{{serializeTasklist()}}</pre>
 
     <!-- build:js(.) scripts/vendor.js -->
     <!-- bower:js -->

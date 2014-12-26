@@ -1,7 +1,5 @@
 /* Space out content a bit */
 body {
-  padding-top: 20px;
-  padding-bottom: 20px;
   max-width: 800px;
   margin-left: auto;
   margin-right: auto;
@@ -83,14 +81,15 @@ body {
 
 #tasklist {
     list-style: none outside none;
-    padding: 1em;
+    padding: 0px;
 }
 
 #tasklist .item {
-    height: 1.6em;
+    height: 25px;
     padding: 0px;
-    margin: 5px 0;
+    margin: 0 0;
     background-color: #e9f2f9;
+    border-bottom: 1px solid #96B4CD;
 
     font-size: 1.1em;
     text-align: left;
@@ -180,10 +179,19 @@ body {
     cursor: move;
     width: 1em;
     margin-right: 0.3em;
-    background: repeating-linear-gradient(#83AECA, #83AECA 1px, #e9f2f9 1px, #e9f2f9 2px);
+    background: repeating-linear-gradient(90deg, #83AECA, #83AECA 1px, #e9f2f9 1px, #e9f2f9 2px);
 }
 
 #tasklist .item .item-edit-box {
     float: right;
     width: 60%;
+}
+
+#header {
+    /*height: 40px;*/
+    overflow: hidden;
+}
+
+.signin-btn {
+    float: right;
 }
