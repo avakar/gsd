@@ -555,7 +555,7 @@ function Tasklist() {
         var count = 0;
         while (cur !== priv.head) {
             ++count;
-            if (count > 10 || cur.prev !== prev || prev.next !== cur) {
+            if (cur.prev !== prev || prev.next !== cur) {
                 debugger;
             }
             prev = cur;
@@ -775,10 +775,14 @@ app.controller('tasklistController', function($scope, gsignin, taskapi) {
     $scope.sortableOptions = {
         handle: '> .drag-handle'
     };
+
+    var contextFilters = [];
     $scope.createNewTask = function(e) {
         var val = e.target.value;
         e.target.value = '';
-        this.tasklist.addTask(val, false);
+        if (contextFilters.length)
+            val = val + ' @' + contextFilters[0];
+        this.tasklist.addTask(val);
         e.preventDefault();
     };
 
@@ -797,7 +801,6 @@ app.controller('tasklistController', function($scope, gsignin, taskapi) {
         taskapi.tasklist.verify();
     };
 
-    var contextFilters = [];
     $scope.filterByContext = function(ctx, $event) {
         var pos = contextFilters.indexOf(ctx);
         if (pos === -1) {
@@ -817,6 +820,13 @@ app.controller('tasklistController', function($scope, gsignin, taskapi) {
     $scope.getCtxBtnClass = function(ctx) {
         return contextFilters.indexOf(ctx) === -1?
             'context-hidden': 'context-shown';
+    };
+
+    $scope.getNewTaskHint = function() {
+        if (contextFilters.length)
+            return "New task @" + contextFilters[0];
+        else
+            return "New task";
     };
 
     $scope.showContextLabels = function() {

@@ -34,7 +34,7 @@
     </div>
 
     <div style="overflow: hidden">
-        <input type="text" ui-keypress="{13:'createNewTask($event)'}" placeholder="Add new task" arrow-navigable>
+        <input type="text" ui-keypress="{13:'createNewTask($event)'}" placeholder="{{getNewTaskHint()}}" arrow-navigable>
 
         <ul ui-sortable="sortableOptions" id="tasklist" ng-model="tasklist.filtered">
             <li ng-repeat="entry in tasklist.filtered" class="item">
