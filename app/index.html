@@ -24,15 +24,16 @@
         <button ng-if="taskapi.signedin" ng-click="signout()">Sign Out</button>
     </div>
 
-    <div style="float: left">
-        <form>
-            <div ng-repeat="(name, f) in filters">
-                <input type="radio" ng-model="filter" ng-value="f">{{name}}</input>
-            </div>
-        </form>
+    <div style="width: 10em; float: left">
+        <div ng-repeat="(name, f) in filters">
+            <label><input type="radio" ng-model="filter" ng-value="f">{{name}}</label>
+        </div>
+        <ul class="context-btns">
+            <li ng-repeat="ctx in taskapi.contexts"><span ng-class="getCtxBtnClass(ctx)" ng-click="filterByContext(ctx, $event)">{{ctx}}&#8203;</span></li>
+        </ul>
     </div>
 
-    <div>
+    <div style="overflow: hidden">
         <input type="text" ui-keypress="{13:'createNewTask($event)'}" placeholder="Add new task" arrow-navigable>
 
         <ul ui-sortable="sortableOptions" id="tasklist" ng-model="tasklist.filtered">
@@ -44,7 +45,7 @@
                     <img src="/images/item-delete.png" ng-click="deleteTask(entry)" class="item-edit">
                     <img class="item-edit" ng-click="beginEdit()" ng-hide="editting || entry.tags.length || entry.contexts.length" src="/images/item-edit.png">
                     <span class="item-contexts" ng-click="beginEdit()" ng-hide="editting">
-                        <span class="item-context" ng-repeat="ctx in entry.contexts">{{ctx}}</span>
+                        <span ng-repeat="ctx in entry.contexts"><span class="item-context" ng-class="getCtxBtnClass(ctx)">{{ctx}}</span></span>
                     </span>
                     <span class="item-tags" ng-click="beginEdit()" ng-hide="editting">
                         <span class="item-tag" ng-repeat="tag in entry.tags">#{{tag}}</span>

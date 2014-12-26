@@ -132,12 +132,31 @@ body {
     margin-right: 0px;
 }
 
-#tasklist .item .item-context {
+.context-btns {
+    padding: 0px;
+}
+
+.item-contexts .item-context,
+.context-btns .context-shown,
+.context-btns .context-hidden {
     font-size: x-small;
     color: #E2EFF8;
     background-color: #386C8E;
     border-radius: 5px;
     padding: 3px;
+    cursor: pointer;
+}
+
+.context-btns li {
+    display: inline;
+}
+
+.item-contexts .context-shown {
+    opacity: 0.3;
+}
+
+.context-btns .context-shown {
+    background-color: black;
 }
 
 #tasklist .item .item-edit {

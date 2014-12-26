@@ -549,14 +549,14 @@ function Tasklist() {
         var cur = prev.next;
 
         if (cur.prev !== prev || prev.next !== cur) {
-            alert('whoops');
+            debugger;
         }
 
         var count = 0;
         while (cur !== priv.head) {
             ++count;
             if (count > 10 || cur.prev !== prev || prev.next !== cur) {
-                alert('whoops');
+                debugger;
             }
             prev = cur;
             cur = cur.next;
@@ -655,11 +655,26 @@ app.service('taskapi', function($http, $timeout) {
     priv.tasklist.events.$on('change', function() {
         store_to_server();
     });
+
+    Object.defineProperty(this, 'contexts', {
+        enumerable: false,
+        configurable: false,
+        get: function() {
+            var res = {};
+            priv.tasklist.forEach(function(task) {
+                task.contexts.forEach(function(ctx) {
+                    res[ctx] = true;
+                });
+            });
+            return Object.keys(res).sort();
+        },
+    });
 });
 
 function FilteredTasklist(tasklist, filter) {
     var priv = {
         filter: filter,
+        contextFilter: [],
         suppress_prefilter: false
         };
 
@@ -701,10 +716,25 @@ function FilteredTasklist(tasklist, filter) {
         oldSplice.call(this.filtered, 0, this.filtered.length);
         var cur = tasklist.sentinel.next;
         while (cur !== tasklist.sentinel) {
-            if (!priv.filter || priv.filter.matches(cur))
+            var matchesCtx = priv.contextFilter.length === 0
+                    || cur.contexts.length === 0;
+            if (!matchesCtx) {
+                cur.contexts.forEach(function(ctx) {
+                    if (priv.contextFilter.indexOf(ctx) !== -1)
+                        matchesCtx = true;
+                });
+            }
+
+            if (matchesCtx
+                    && (!priv.filter || priv.filter.matches(cur)))
                 this.filtered.push(cur);
             cur = cur.next;
         }
+    };
+
+    this.setContextFilter = function(contexts) {
+        priv.contextFilter = contexts;
+        this.prefilter();
     };
 
     this.addTask = function(textAndDesc) {
@@ -765,6 +795,32 @@ app.controller('tasklistController', function($scope, gsignin, taskapi) {
 
     $scope.verify = function() {
         taskapi.tasklist.verify();
+    };
+
+    var contextFilters = [];
+    $scope.filterByContext = function(ctx, $event) {
+        var pos = contextFilters.indexOf(ctx);
+        if (pos === -1) {
+            if ($event.ctrlKey)
+                contextFilters.push(ctx);
+            else
+                contextFilters = [ctx];
+        } else {
+            if ($event.ctrlKey || contextFilters.length === 1)
+                contextFilters.splice(pos, 1);
+            else
+                contextFilters = [ctx];
+        }
+        $scope.tasklist.setContextFilter(contextFilters);
+    };
+
+    $scope.getCtxBtnClass = function(ctx) {
+        return contextFilters.indexOf(ctx) === -1?
+            'context-hidden': 'context-shown';
+    };
+
+    $scope.showContextLabels = function() {
+        return contextFilters.length !== 1;
     };
 });
 
