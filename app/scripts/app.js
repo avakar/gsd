@@ -1,7 +1,7 @@
 'use strict';
 
 var app = angular.module('myapp2App', ['ui.bootstrap', 'ui.sortable', 'ui.keypress', 'angular_taglist_directive']);
-var api_path = '/api';
+var api_path = 'http://gsd.ratatanek.cz/api';
 
 app.provider('gsignin', function() {
     function Gsignin($rootScope, $timeout, provider) {
@@ -832,6 +832,17 @@ app.controller('tasklistController', function($scope, gsignin, taskapi) {
 
     $scope.showContextLabels = function() {
         return contextFilters.length !== 1;
+    };
+
+    $scope.sidebarActive = false;
+
+    $scope.toggleSidebar = function(event) {
+        this.sidebarActive = !this.sidebarActive;
+        event.stopPropagation();
+    };
+
+    $scope.hideSidebar = function(event) {
+        this.sidebarActive = false;
     };
 });
 

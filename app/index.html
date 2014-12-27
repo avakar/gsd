@@ -19,7 +19,7 @@
   <body ng-app="myapp2App" ng-controller="tasklistController">
     <!-- Add your site or application content here -->
 
-    <div id="sidebar">
+    <div id="sidebar" ng-class="sidebarActive? 'sidebar-active': 'sidebar-inactive'">
         <div ng-repeat="(name, f) in filters">
             <label><input type="radio" ng-model="filter" ng-value="f">{{name}}</label>
         </div>
@@ -28,45 +28,44 @@
         </ul>
     </div>
 
-    <div style="overflow: hidden">
-        <div id="header">
-            <div class="signin-btn" ng-cloak>
-                <span ng-if="!taskapi.signedin" gsignin></span>
-                <button ng-if="taskapi.signedin" ng-click="signout()">Sign Out</button>
+    <div id="content" style="overflow: hidden" ng-click="hideSidebar()">
+        <div id="header" style="display: block; width: 100%;overflow: hidden;">
+            <div style="float: left; height: 25px">
+                <img src="/images/menu.png" style="display: block; height: 100%; width: auto" ng-click="toggleSidebar($event)">
             </div>
-            <div id="sidebar-btn" style="float: left; background-color: red; width: 2em; height: 100%"></div>
-            <div style="overflow:hidden">
-                <input style="width: 100%;" type="text" ui-keypress="{13:'createNewTask($event)'}" placeholder="{{getNewTaskHint()}}" arrow-navigable>
+            <img src="/images/signout.png" ng-click="signout()" style="float: right; cursor: pointer; height: 25px">
+            <div style="overflow: hidden">
+                <input style="display: block; width: 100%" type="text" ui-keypress="{13:'createNewTask($event)'}"
+                    placeholder="{{getNewTaskHint()}}" ng-disabled="!taskapi.signedin" arrow-navigable>
             </div>
         </div>
 
-        <div id="content">
+        <div ng-if="!taskapi.signedin" id="signin-button">
+            <div gsignin></div>
+        </div>
 
-        <div style="overflow: hidden">
-            <ul ui-sortable="sortableOptions" id="tasklist" ng-model="tasklist.filtered">
-                <li ng-repeat="entry in tasklist.filtered" class="item">
-                    <div class="drag-handle"></div>
-                    <div inline-edit-context="{ get: 'entry.getDescriptor()', set: 'entry.applyDescriptor($value)'}">
-                        <input class="item-complete" type="checkbox" ng-model="entry.complete">
+        <ul ui-sortable="sortableOptions" id="tasklist" ng-model="tasklist.filtered">
+            <li ng-repeat="entry in tasklist.filtered" class="item">
+                <div class="drag-handle"></div>
+                <div inline-edit-context="{ get: 'entry.getDescriptor()', set: 'entry.applyDescriptor($value)'}">
+                    <input class="item-complete" type="checkbox" ng-model="entry.complete">
 
-                        <img src="/images/item-delete.png" ng-click="deleteTask(entry)" class="item-edit">
-                        <img class="item-edit" ng-click="beginEdit()" ng-hide="editting || entry.tags.length || entry.contexts.length" src="/images/item-edit.png">
-                        <span class="item-contexts" ng-click="beginEdit()" ng-hide="editting">
-                            <span ng-repeat="ctx in entry.contexts"><span class="item-context" ng-class="getCtxBtnClass(ctx)">{{ctx}}</span></span>
-                        </span>
-                        <span class="item-tags" ng-click="beginEdit()" ng-hide="editting">
-                            <span class="item-tag" ng-repeat="tag in entry.tags">#{{tag}}</span>
-                        </span>
-                        <input class="item-edit-box" inline-edit-input type="text">
+                    <img src="/images/item-delete.png" ng-click="deleteTask(entry)" class="item-edit">
+                    <img class="item-edit" ng-click="beginEdit()" ng-hide="editting || entry.tags.length || entry.contexts.length" src="/images/item-edit.png">
+                    <span class="item-contexts" ng-click="beginEdit()" ng-hide="editting">
+                        <span ng-repeat="ctx in entry.contexts"><span class="item-context" ng-class="getCtxBtnClass(ctx)">{{ctx}}</span></span>
+                    </span>
+                    <span class="item-tags" ng-click="beginEdit()" ng-hide="editting">
+                        <span class="item-tag" ng-repeat="tag in entry.tags">#{{tag}}</span>
+                    </span>
+                    <input class="item-edit-box" inline-edit-input type="text">
 
-                        <div class="item-text">
-                            <input class="item-text-input" type="text" ng-model="entry.text" arrow-navigable>
-                        </div>
+                    <div class="item-text">
+                        <input class="item-text-input" type="text" ng-model="entry.text" arrow-navigable>
                     </div>
-                </li>
-            </ul>
-        </div>
-        <div>
+                </div>
+            </li>
+        </ul>
     </div>
 
     <!-- build:js(.) scripts/vendor.js -->
