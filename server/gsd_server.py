@@ -1,3 +1,6 @@
+import sys, os.path
+sys.path.insert(0, os.path.split(__file__)[0])
+
 from flask import Flask, request, abort, make_response, send_from_directory
 import flask_cors, oauth2, jwt, psycopg2, json, time
 
@@ -24,6 +27,8 @@ google_openid = oauth2.Provider()
 google_openid.google_discover()
 
 app = Flask(__name__)
+application = app
+
 app.config['CORS_HEADERS'] = ['content-type', 'authorization']
 app.config['CORS_METHODS'] = ['GET', 'POST', 'PUT']
 flask_cors.CORS(app)
@@ -36,6 +41,10 @@ def authorize():
     if auth['iss'] != 'gsd.ratatanek.cz':
         abort(401)
     return int(auth['sub'])
+
+@app.route('/', methods=['GET'])
+def ident():
+    return 'gsd_server'
 
 @app.route('/tasks', methods=['GET', 'PUT'])
 def list_tasks():
@@ -109,14 +118,7 @@ def google_auth():
     resp.headers['content-type'] = 'application/json'
     return resp
 
-@app.route('/bower_components/<path:filename>')
-def bower_files(filename):
-    return send_from_directory('../bower_components', filename)
-
-@app.route('/', defaults={'filename': 'index.html'})
-@app.route('/<path:filename>')
-def static_files(filename):
-    return send_from_directory('../app', filename)
+app.debug = True
 
 if __name__ == '__main__':
     #app.debug = True

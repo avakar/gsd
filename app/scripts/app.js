@@ -1,6 +1,7 @@
 'use strict';
 
 var app = angular.module('myapp2App', ['ui.bootstrap', 'ui.sortable', 'ui.keypress', 'angular_taglist_directive']);
+var api_path = '/api';
 
 app.provider('gsignin', function() {
     function Gsignin($rootScope, $timeout, provider) {
@@ -84,7 +85,7 @@ app.factory('$storage', function($window) {
 app.run(function($rootScope, $http, gsignin, taskapi) {
     $rootScope.$on('gsignin', function(scope, authResult) {
         if (authResult['status']['signed_in']) {
-            $http.post('http://ratatanek.cz:5000/auth/google', {
+            $http.post(api_path + '/auth/google', {
                 id_token: authResult['id_token']
                 }).
                 success(function(data, status, headers, config) {
@@ -583,7 +584,7 @@ app.service('taskapi', function($http, $timeout) {
 
     function load_from_server() {
         priv.load_timeout_promise = null;
-        $http.get('http://ratatanek.cz:5000/tasks', {
+        $http.get(api_path + '/tasks', {
             headers: { 'Authorization': 'Bearer ' + priv.token }
             })
             .success(function(data) {
@@ -612,7 +613,7 @@ app.service('taskapi', function($http, $timeout) {
             var data = {
                 tasks: priv.tasklist.store(),
                 };
-            $http.put('http://ratatanek.cz:5000/tasks', data, {
+            $http.put(api_path + '/tasks', data, {
                 headers: { 'Authorization': 'Bearer ' + priv.token }
                 })
                 .success(function(data) {
