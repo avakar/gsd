@@ -47,10 +47,9 @@
         <ul ui-sortable="sortableOptions" id="tasklist" ng-model="tasklist.filtered">
             <li ng-repeat="entry in tasklist.filtered" class="item">
                 <div class="drag-handle"></div>
-                <div inline-edit-context="{ get: 'entry.getDescriptor()', set: 'entry.applyDescriptor($value)'}">
+                <div inline-edit-context="{ get: 'entry.getDescriptor()', set: 'applyDescriptor(entry, $value)'}">
                     <input class="item-complete" type="checkbox" ng-model="entry.complete">
 
-                    <img src="/images/item-delete.png" ng-click="deleteTask(entry)" class="item-edit">
                     <img class="item-edit" ng-click="beginEdit()" ng-hide="editting || entry.tags.length || entry.contexts.length" src="/images/item-edit.png">
                     <span class="item-contexts" ng-click="beginEdit()" ng-hide="editting">
                         <span ng-repeat="ctx in entry.contexts"><span class="item-context" ng-class="getCtxBtnClass(ctx)">{{ctx}}</span></span>

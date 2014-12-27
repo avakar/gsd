@@ -844,6 +844,13 @@ app.controller('tasklistController', function($scope, gsignin, taskapi) {
     $scope.hideSidebar = function(event) {
         this.sidebarActive = false;
     };
+
+    $scope.applyDescriptor = function(task, value) {
+        if (value == '!delete')
+            this.deleteTask(task);
+        else
+            task.applyDescriptor(value);
+    };
 });
 
 app.directive('inlineEditContext', function() {
