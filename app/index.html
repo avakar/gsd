@@ -19,7 +19,7 @@
   <body ng-app="myapp2App" ng-controller="tasklistController">
     <!-- Add your site or application content here -->
 
-    <div style="width: 10em; float: left">
+    <div id="sidebar">
         <div ng-repeat="(name, f) in filters">
             <label><input type="radio" ng-model="filter" ng-value="f">{{name}}</label>
         </div>
@@ -34,6 +34,7 @@
                 <span ng-if="!taskapi.signedin" gsignin></span>
                 <button ng-if="taskapi.signedin" ng-click="signout()">Sign Out</button>
             </div>
+            <div id="sidebar-btn" style="float: left; background-color: red; width: 2em; height: 100%"></div>
             <div style="overflow:hidden">
                 <input style="width: 100%;" type="text" ui-keypress="{13:'createNewTask($event)'}" placeholder="{{getNewTaskHint()}}" arrow-navigable>
             </div>
