@@ -150,6 +150,12 @@ body {
     float: left;
 }
 
+#sidebar-button-wrapper {
+    float: left;
+    height: 25px;
+    display: none;
+}
+
 @media (max-width: 35em) {
 
 #sidebar.sidebar-inactive {
@@ -162,6 +168,10 @@ body {
     bottom: 0px;
     background-color: white;
     z-index: 1;
+}
+
+#sidebar-button-wrapper {
+    display: block;
 }
 
 }
