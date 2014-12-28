@@ -110,12 +110,6 @@ body {
 #tasklist .item .item-edit {
     float: right;
     cursor: pointer;
-    visibility: hidden;
-}
-
-#tasklist .item .item-delete {
-    float: right;
-    cursor: pointer;
 }
 
 #tasklist .item:hover .item-edit {
