@@ -1,21 +1,22 @@
 'use strict';
+/*global gapi*/
+/*global jQuery*/
 
 var app = angular.module('myapp2App', ['ui.bootstrap', 'ui.sortable', 'ui.keypress', 'angular_taglist_directive']);
-var api_path = 'http://gsd.ratatanek.cz/api';
+var apiPath = 'http://gsd.ratatanek.cz/api';
 
 app.provider('gsignin', function() {
     function Gsignin($rootScope, $timeout, provider) {
         var priv = {
-            id_token: null
+            idtoken: null
         };
 
         function authCallback(authResult) {
-            console.log(authResult.status.signed_in);
             $timeout(function() {
-                if (authResult['status']['signed_in']) {
-                    priv.id_token = authResult['id_token'];
+                if (authResult.status.signed_in) {
+                    priv.idtoken = authResult.id_token;
                 } else {
-                    priv.id_token = null;
+                    priv.idtoken = null;
                 }
 
                 $rootScope.$broadcast('gsignin', authResult);
@@ -51,15 +52,15 @@ app.provider('gsignin', function() {
             enumerable: true,
             configurable: false,
             get: function() {
-                return priv.id_token !== null;
+                return priv.idtoken !== null;
             }
         });
 
-        Object.defineProperty(this, 'id_token', {
+        Object.defineProperty(this, 'idtoken', {
             enumerable: true,
             configurable: false,
             get: function() {
-                return priv.id_token;
+                return priv.idtoken;
             }
         });
     }
@@ -84,14 +85,14 @@ app.factory('$storage', function($window) {
 
 app.run(function($rootScope, $http, gsignin, taskapi) {
     $rootScope.$on('gsignin', function(scope, authResult) {
-        if (authResult['status']['signed_in']) {
-            $http.post(api_path + '/auth/google', {
-                id_token: authResult['id_token']
+        if (authResult.status.signed_in) {
+            $http.post(apiPath + '/auth/google', {
+                id_token: authResult.id_token,
                 }).
-                success(function(data, status, headers, config) {
+                success(function(data) {
                     taskapi.setToken(data.token);
                 }).
-                error(function(data, status, headers, config) {
+                error(function() {
                     taskapi.setToken(null);
                 });
         } else {
@@ -102,7 +103,7 @@ app.run(function($rootScope, $http, gsignin, taskapi) {
 
 app.directive('gsignin', function(gsignin) {
     return {
-        link: function(scope, elem, attrs, controller) {
+        link: function(scope, elem) {
             gsignin.render(elem);
         }
     };
@@ -165,7 +166,7 @@ app.directive('arrowNavigable', function() {
     }
 
     return {
-        link: function(scope, elem, attrs, controller) {
+        link: function(scope, elem) {
             elem.on('keydown', function(e) {
                 if (e.keyCode === 38) {
                     refocus(this, findprev(this));
@@ -404,15 +405,15 @@ function Task(changeCallback, id, textAndDesc) {
         }
 
         comps.forEach(function(comp) {
-            if (comp.length > 0 && comp[0] == '#') {
+            if (comp.length > 0 && comp[0] === '#') {
                 addPart();
                 state.kind = 1;
                 state.cur = [comp.substr(1)];
-            } else if (comp.length > 0 && comp[0] == '@') {
+            } else if (comp.length > 0 && comp[0] === '@') {
                 addPart();
                 state.kind = 2;
                 state.cur = [comp.substr(1)];
-            } else if (comp.length > 0 && comp[0] == '^') {
+            } else if (comp.length > 0 && comp[0] === '^') {
                 addPart();
                 state.kind = 3;
                 state.cur = [comp.substr(1)];
@@ -466,7 +467,7 @@ function Task(changeCallback, id, textAndDesc) {
 
     this.getFriendlyStartDate = function() {
         return formatStartDate(priv.startDate, 'human');
-    }
+    };
 
     this.getDescriptor = function() {
         var parts = [];
@@ -477,7 +478,7 @@ function Task(changeCallback, id, textAndDesc) {
         if (priv.contexts.length)
             parts.push('@' + priv.contexts.join(' @'));
         return parts.join(' ');
-    }
+    };
 
     this.addTag = function(tag) {
         if (priv.tags.indexOf(tag) === -1) {
@@ -529,7 +530,7 @@ function EventEmitter() {
             var pos = regs[event].indexOf(handler);
             if (pos >= 0)
                 regs.splice(pos, 1);
-        }
+        };
     };
 
     this.$emit = function(event) {
@@ -539,7 +540,7 @@ function EventEmitter() {
                 handler.apply(handler, eventArgs);
             });
         }
-    }
+    };
 
     this.$pause = function(event) {
         paused[event] = true;
@@ -614,7 +615,7 @@ function Tasklist() {
 
     function _clear() {
         var cur = priv.head.next;
-        while (cur != priv.head) {
+        while (cur !== priv.head) {
             cur = _remove(cur);
         }
     }
@@ -649,7 +650,6 @@ function Tasklist() {
 
         priv.head = newHead;
         priv.task_map = newTaskmap;
-        this.verify();
         priv.suppress_events = false;
         onChange();
     };
@@ -664,7 +664,7 @@ function Tasklist() {
 
     this.forEach = function(callback, thisArg) {
         var cur = priv.head.next;
-        while (cur != priv.head) {
+        while (cur !== priv.head) {
             callback.call(thisArg, cur);
             cur = cur.next;
         }
@@ -694,7 +694,7 @@ function Tasklist() {
         return angular.toJson(res);
     };
 
-    this.verify = function() {
+/*    this.verify = function() {
         var prev = priv.head;
         var cur = prev.next;
 
@@ -711,7 +711,7 @@ function Tasklist() {
             prev = cur;
             cur = cur.next;
         }
-    };
+    };*/
 }
 
 app.service('taskapi', function($http, $timeout) {
@@ -733,7 +733,7 @@ app.service('taskapi', function($http, $timeout) {
 
     function load_from_server() {
         priv.load_timeout_promise = null;
-        $http.get(api_path + '/tasks', {
+        $http.get(apiPath + '/tasks', {
             headers: { 'Authorization': 'Bearer ' + priv.token }
             })
             .success(function(data) {
@@ -762,7 +762,7 @@ app.service('taskapi', function($http, $timeout) {
             var data = {
                 tasks: priv.tasklist.store(),
                 };
-            $http.put(api_path + '/tasks', data, {
+            $http.put(apiPath + '/tasks', data, {
                 headers: { 'Authorization': 'Bearer ' + priv.token }
                 })
                 .success(function(data) {
@@ -792,7 +792,7 @@ app.service('taskapi', function($http, $timeout) {
                 priv.tasklist.clear();
             }
         }
-    }
+    };
 
     Object.defineProperty(this, 'signedin', {
         enumerable: true,
@@ -864,10 +864,9 @@ function FilteredTasklist(tasklist, filter) {
 
     this.prefilter = function() {
         oldSplice.call(this.filtered, 0, this.filtered.length);
-        var cur = tasklist.sentinel.next;
-        while (cur !== tasklist.sentinel) {
-            var matchesCtx = priv.contextFilter.length === 0
-                    || cur.contexts.length === 0;
+        tasklist.forEach(function(cur) {
+            var matchesCtx = priv.contextFilter.length === 0 ||
+                    cur.contexts.length === 0;
             if (!matchesCtx) {
                 cur.contexts.forEach(function(ctx) {
                     if (priv.contextFilter.indexOf(ctx) !== -1)
@@ -875,11 +874,10 @@ function FilteredTasklist(tasklist, filter) {
                 });
             }
 
-            if (matchesCtx
-                    && (!priv.filter || priv.filter.matches(cur)))
+            if (matchesCtx &&
+                    (!priv.filter || priv.filter.matches(cur)))
                 this.filtered.push(cur);
-            cur = cur.next;
-        }
+        }, this);
     };
 
     this.setContextFilter = function(contexts) {
@@ -947,10 +945,6 @@ app.controller('tasklistController', function($scope, gsignin, taskapi) {
     $scope.gapi = gsignin;
     $scope.taskapi = taskapi;
 
-    $scope.verify = function() {
-        taskapi.tasklist.verify();
-    };
-
     $scope.filterByContext = function(ctx, $event) {
         var pos = contextFilters.indexOf(ctx);
         if (pos === -1) {
@@ -974,9 +968,9 @@ app.controller('tasklistController', function($scope, gsignin, taskapi) {
 
     $scope.getNewTaskHint = function() {
         if (contextFilters.length)
-            return "New task @" + contextFilters[0];
+            return 'New task @' + contextFilters[0];
         else
-            return "New task";
+            return 'New task';
     };
 
     $scope.showContextLabels = function() {
@@ -990,12 +984,12 @@ app.controller('tasklistController', function($scope, gsignin, taskapi) {
         event.stopPropagation();
     };
 
-    $scope.hideSidebar = function(event) {
+    $scope.hideSidebar = function() {
         this.sidebarActive = false;
     };
 
     $scope.applyDescriptor = function(task, value) {
-        if (value == '!delete')
+        if (value === '!delete')
             this.deleteTask(task);
         else
             task.applyDescriptor(value);
@@ -1026,15 +1020,15 @@ app.directive('inlineEditContext', function() {
                 $scope.editting = false;
             };
 
-            this.cancelEdit = function(input) {
+            this.cancelEdit = function() {
                 $scope.editting = false;
             };
         },
         link: function($scope, element, attrs) {
             completionAction = $scope.$eval(attrs.inlineEditContext);
             element.on('keydown', function(event) {
-                if (event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey
-                        && event.keyCode == 13) {
+                if (event.altKey && !event.ctrlKey && !event.shiftKey &&
+                        !event.metaKey && event.keyCode === 13) {
                     $scope.$apply(function() {
                         $scope.beginEdit();
                     });
@@ -1102,9 +1096,6 @@ app.directive('inlineEditInput', function($document, $rootScope) {
                     refocus();
                     break;
                 }
-            });
-            
-            element.on('keypress', function(event) {
             });
         },
     };

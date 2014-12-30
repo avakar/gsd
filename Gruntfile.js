@@ -74,7 +74,7 @@ module.exports = function (grunt) {
       livereload: {
         options: {
           open: true,
-          middleware: function (connect, options) {
+          middleware: function (connect) {
             return [
                 require('connect-modrewrite')(['!(\\..+)$ / [L]']),
                 connect.static('.tmp'),
