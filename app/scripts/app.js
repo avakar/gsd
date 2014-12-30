@@ -187,6 +187,7 @@ function Task(changeCallback, id, textAndDesc) {
         complete: false,
         tags: [],
         contexts: [],
+        startDate: 'next',
     };
 
     Object.defineProperty(this, 'prev', {
@@ -246,6 +247,12 @@ function Task(changeCallback, id, textAndDesc) {
         get: function() { return priv.contexts; },
     });
 
+    Object.defineProperty(this, 'startDate', {
+        enumerable: true,
+        configurable: false,
+        get: function() { return priv.startDate; },
+    });
+
     this.load = function(t) {
         priv.id = t.id;
         priv.text = t.text;
@@ -266,11 +273,30 @@ function Task(changeCallback, id, textAndDesc) {
         newCtxs.sort();
         priv.tags = jQuery.unique(newTags);
         priv.contexts = jQuery.unique(newCtxs);
+
+        if ('startDate' in t) {
+            if (typeof(t.startDate) === 'number') {
+                priv.startDate = new Date();
+                priv.startDate.setTime(t.startDate * 1000);
+            } else {
+                priv.startDate = t.startDate;
+            }
+        } else {
+            priv.startDate = 'next';
+        }
+
         priv.changeCallback(this);
     };
 
     this.store = function() {
-        return this;
+        return {
+            id: priv.id,
+            text: priv.text,
+            complete: priv.complete,
+            tags: priv.tags,
+            contexts: priv.contexts,
+            startDate: priv.startDate instanceof Date? priv.startDate.getTime() / 1000: priv.startDate,
+        };
     };
 
     this.applyDescriptor = function(desc) {
@@ -281,7 +307,81 @@ function Task(changeCallback, id, textAndDesc) {
             prefix: '',
             newTags: [],
             newCtxs: [],
+            newStartDate: priv.startDate,
             };
+
+        function parseStartDate(s) {
+            var res = null;
+            if (s.substr(0, 1) === '+') {
+                s = s.substr(1);
+                var nonDigitIndex = s.length;
+                for (var i = 0; i < s.length; ++i) {
+                    var ch = s.charCodeAt(i);
+                    if (0x30 > ch || ch > 0x39) {
+                        nonDigitIndex = i;
+                        break;
+                    }
+                }
+
+                var value = parseInt(s.substr(0, nonDigitIndex));
+                var unit = s.substr(nonDigitIndex);
+                var selectedUnit = null;
+                if (unit === '') {
+                    selectedUnit = 'days';
+                } else {
+                    ['days', 'weeks', 'months', 'years'].forEach(function(spec) {
+                        if (spec.substr(0, unit.length) === unit)
+                            selectedUnit = spec;
+                    });
+                }
+
+                if (selectedUnit === null)
+                    return null;
+
+                res = new Date();
+                res.setUTCHours(0, 0, 0, 0);
+
+                switch (selectedUnit) {
+                case 'days':
+                    res.setUTCDate(res.getUTCDate() + value);
+                    break;
+                case 'weeks':
+                    res.setUTCDate(res.getUTCDate() + 7*value);
+                    break;
+                case 'months':
+                    res.setUTCMonth(res.getUTCMonth() + value, 1);
+                    break;
+                case 'years':
+                    res.setUTCFullYear(res.getUTCFullYear() + value, 0, 1);
+                    break;
+                }
+
+            } else {
+                ['tomorrow', 'today', 'now', 'next', 'waiting', 'someday'].forEach(function(spec) {
+                    if (spec.substr(0, s.length) === s)
+                        res = spec;
+                });
+
+                if (res === 'today' || res === 'now') {
+                    res = new Date();
+                    res.setUTCHours(0, 0, 0, 0);
+                }
+
+                if (res === 'tomorrow') {
+                    res = new Date();
+                    res.setUTCHours(0, 0, 0, 0);
+                    res.setUTCDate(res.getUTCDate() + 1);
+                }
+
+                if (res === null) {
+                    res = Date.parse(s);
+                    if (isNaN(res))
+                        return null;
+                    res = new Date(res);
+                }
+            }
+            return res;
+        }
 
         function addPart() {
             var cur = state.cur.join(' ');
@@ -295,6 +395,11 @@ function Task(changeCallback, id, textAndDesc) {
             case 2:
                 state.newCtxs.push(cur);
                 break;
+            case 3:
+                var tmp = parseStartDate(cur);
+                if (tmp !== null)
+                    state.newStartDate = tmp;
+                break;
             }
         }
 
@@ -307,6 +412,10 @@ function Task(changeCallback, id, textAndDesc) {
                 addPart();
                 state.kind = 2;
                 state.cur = [comp.substr(1)];
+            } else if (comp.length > 0 && comp[0] == '^') {
+                addPart();
+                state.kind = 3;
+                state.cur = [comp.substr(1)];
             } else {
                 state.cur.push(comp);
             }
@@ -317,12 +426,47 @@ function Task(changeCallback, id, textAndDesc) {
         state.newCtxs.sort();
         priv.tags = jQuery.unique(state.newTags);
         priv.contexts = jQuery.unique(state.newCtxs);
+        priv.startDate = state.newStartDate;
         changeCallback(this);
         return state.prefix;
     };
 
+    this.getFriendlyStartDate = function() {
+        function format(date) {
+            if (date instanceof Date) {
+                date = new Date(date.getTime());
+                date.setUTCHours(0, 0, 0, 0);
+                var now = new Date();
+                now.setUTCHours(0, 0, 0, 0);
+
+                var diff = date.getTime() - now.getTime();
+                if (diff === 0)
+                    return 'today';
+                if (diff === 86400000)
+                    return 'tomorrow';
+                if (diff <= 604800000)
+                    return '+' + (diff / 86400000).toString() + 'd';
+
+                var month = (date.getUTCMonth() + 1).toString();
+                while (month.length < 2)
+                    month = '0' + month;
+
+                var day = date.getUTCDate().toString();
+                while (day.length < 2)
+                    day = '0' + day;
+
+                return date.getUTCFullYear().toString() + '-' + month + '-' + day;
+            }
+            return date;
+        }
+
+        return format(priv.startDate);
+    }
+
     this.getDescriptor = function() {
         var parts = [];
+        if (priv.startDate !== 'next')
+            parts.push('^' + this.getFriendlyStartDate());
         if (priv.tags.length)
             parts.push('#' + priv.tags.join(' #'));
         if (priv.contexts.length)

@@ -51,13 +51,20 @@
                     <input class="item-complete" type="checkbox" ng-model="entry.complete">
 
                     <img class="item-edit" ng-click="beginEdit()" ng-hide="editting || entry.tags.length || entry.contexts.length" src="/images/item-edit.png">
+
                     <span class="item-contexts" ng-click="beginEdit()" ng-hide="editting">
                         <span ng-repeat="ctx in entry.contexts"><span class="item-context" ng-class="getCtxBtnClass(ctx)">{{ctx}}</span></span>
                     </span>
+
+                    <span class="item-date-wrapper" ng-click="beginEdit()" ng-hide="editting || entry.startDate === 'next'">
+                        <span class="item-date">{{entry.getFriendlyStartDate()}}</span>
+                    </span>
+
                     <span class="item-tags" ng-click="beginEdit()" ng-hide="editting">
                         <span class="item-tag" ng-repeat="tag in entry.tags">#{{tag}}</span>
                     </span>
-                    <input class="item-edit-box" inline-edit-input type="text" placeholder="#proj @context">
+
+                    <input class="item-edit-box" inline-edit-input type="text" placeholder="^start #proj @context">
 
                     <div class="item-text">
                         <input class="item-text-input" type="text" ng-model="entry.text" arrow-navigable>
