@@ -431,42 +431,47 @@ function Task(changeCallback, id, textAndDesc) {
         return state.prefix;
     };
 
-    this.getFriendlyStartDate = function() {
-        function format(date) {
-            if (date instanceof Date) {
-                date = new Date(date.getTime());
-                date.setUTCHours(0, 0, 0, 0);
-                var now = new Date();
-                now.setUTCHours(0, 0, 0, 0);
+    function formatStartDate(date, format) {
+        if (date instanceof Date) {
+            date = new Date(date.getTime());
+            date.setUTCHours(0, 0, 0, 0);
+            var now = new Date();
+            now.setUTCHours(0, 0, 0, 0);
 
-                var diff = date.getTime() - now.getTime();
-                if (diff === 0)
-                    return 'today';
-                if (diff === 86400000)
-                    return 'tomorrow';
-                if (diff <= 604800000)
-                    return '+' + (diff / 86400000).toString() + 'd';
-
-                var month = (date.getUTCMonth() + 1).toString();
-                while (month.length < 2)
-                    month = '0' + month;
-
-                var day = date.getUTCDate().toString();
-                while (day.length < 2)
-                    day = '0' + day;
-
-                return date.getUTCFullYear().toString() + '-' + month + '-' + day;
+            var diff = date.getTime() - now.getTime();
+            if (diff === 0)
+                return 'today';
+            if (diff === 86400000)
+                return 'tomorrow';
+            if (diff <= 604800000) {
+                var val = (diff / 86400000).toString();
+                if (format === 'human')
+                    return 'in ' + val + ' days';
+                else
+                    return '+' + val + 'd';
             }
-            return date;
-        }
 
-        return format(priv.startDate);
+            var month = (date.getUTCMonth() + 1).toString();
+            while (month.length < 2)
+                month = '0' + month;
+
+            var day = date.getUTCDate().toString();
+            while (day.length < 2)
+                day = '0' + day;
+
+            return date.getUTCFullYear().toString() + '-' + month + '-' + day;
+        }
+        return date;
+    }
+
+    this.getFriendlyStartDate = function() {
+        return formatStartDate(priv.startDate, 'human');
     }
 
     this.getDescriptor = function() {
         var parts = [];
         if (priv.startDate !== 'next')
-            parts.push('^' + this.getFriendlyStartDate());
+            parts.push('^' + formatStartDate(priv.startDate, 'desc'));
         if (priv.tags.length)
             parts.push('#' + priv.tags.join(' #'));
         if (priv.contexts.length)
