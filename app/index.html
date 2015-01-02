@@ -20,8 +20,8 @@
     <!-- Add your site or application content here -->
 
     <div id="sidebar" ng-class="sidebarActive? 'sidebar-active': 'sidebar-inactive'">
-        <div ng-repeat="(name, f) in filters">
-            <label><input type="radio" ng-model="filter" ng-value="f">{{name}}</label>
+        <div ng-repeat="f in filters">
+            <label><input type="radio" ng-model="filter" ng-value="f">{{f.name}}</label>
         </div>
         <ul class="context-btns">
             <li ng-repeat="ctx in taskapi.contexts"><span ng-class="getCtxBtnClass(ctx)" ng-click="filterByContext(ctx, $event)">{{ctx}}&#8203;</span></li>

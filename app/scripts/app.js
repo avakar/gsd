@@ -185,7 +185,7 @@ function Task(changeCallback, id, textAndDesc) {
         changeCallback: changeCallback,
         id: id,
         text: '',
-        complete: false,
+        completionTime: null,
         tags: [],
         contexts: [],
         startDate: 'next',
@@ -215,13 +215,26 @@ function Task(changeCallback, id, textAndDesc) {
     Object.defineProperty(this, 'complete', {
         enumerable: true,
         configurable: false,
-        get: function() { return priv.complete; },
+        get: function() { return priv.completionTime !== null; },
         set: function(v) {
-            if (priv.complete !== v) {
-                priv.complete = v;
-                priv.changeCallback(this);
+            if (v) {
+                if (priv.completionTime === null) {
+                    priv.completionTime = new Date();
+                    priv.changeCallback(this);
+                }
+            } else {
+                if (priv.completionTime !== null) {
+                    priv.completionTime = null;
+                    priv.changeCallback(this);
+                }
             }
         }
+    });
+
+    Object.defineProperty(this, 'completionTime', {
+        enumerable: true,
+        configurable: false,
+        get: function() { return priv.completionTime; },
     });
 
     Object.defineProperty(this, 'text', {
@@ -257,7 +270,19 @@ function Task(changeCallback, id, textAndDesc) {
     this.load = function(t) {
         priv.id = t.id;
         priv.text = t.text;
-        priv.complete = t.complete;
+        if ('complete' in t) {
+            if (t.complete) {
+                priv.completionTime = new Date();
+            } else {
+                priv.completionTime = null;
+            }
+        }
+        if ('completionTime' in t) {
+            priv.completionTime = t.completionTime;
+            if (priv.completionTime !== null) {
+                priv.completionTime = new Date(priv.completionTime);
+            }
+        }
         var newTags = [];
         if ('tags' in t) {
             t.tags.forEach(function(tag) {
@@ -293,7 +318,7 @@ function Task(changeCallback, id, textAndDesc) {
         return {
             id: priv.id,
             text: priv.text,
-            complete: priv.complete,
+            completionTime: priv.completionTime === null? null: priv.completionTime.toISOString(),
             tags: priv.tags,
             contexts: priv.contexts,
             startDate: priv.startDate instanceof Date? priv.startDate.getTime() / 1000: priv.startDate,
@@ -504,14 +529,6 @@ function Task(changeCallback, id, textAndDesc) {
 function ListHead() {
     this.prev = this;
     this.next = this;
-}
-
-function Filter(completeOnly) {
-    this.completeOnly = completeOnly;
-
-    this.matches = function(task) {
-        return !this.completeOnly || !task.complete;
-    };
 }
 
 function EventEmitter() {
@@ -864,6 +881,8 @@ function FilteredTasklist(tasklist, filter) {
 
     this.prefilter = function() {
         oldSplice.call(this.filtered, 0, this.filtered.length);
+
+        var filtered = [];
         tasklist.forEach(function(cur) {
             var matchesCtx = priv.contextFilter.length === 0 ||
                     cur.contexts.length === 0;
@@ -874,10 +893,11 @@ function FilteredTasklist(tasklist, filter) {
                 });
             }
 
-            if (matchesCtx &&
-                    (!priv.filter || priv.filter.matches(cur)))
-                this.filtered.push(cur);
-        }, this);
+            if (matchesCtx)
+                filtered.push(cur);
+        });
+
+        this.filtered = priv.filter.filter(filtered);
     };
 
     this.setContextFilter = function(contexts) {
@@ -900,14 +920,39 @@ function FilteredTasklist(tasklist, filter) {
     });
 }
 
-app.controller('tasklistController', function($scope, gsignin, taskapi) {
-    $scope.filters = {
-        Next: new Filter(true),
-        All: new Filter(false)
-    };
+var AllFilter = {
+    name: 'All',
+    allowSort: true,
+    filter: function(tasklist) {
+        var res = [];
+        tasklist.forEach(function(task) {
+            if (!task.complete)
+                res.push(task);
+        });
+        return res;
+    }
+};
 
+var CompletedFilter = {
+    name: 'Completed',
+    allowSort: false,
+    filter: function(tasklist) {
+        var res = [];
+        tasklist.forEach(function(task) {
+            if (task.complete)
+                res.push(task);
+        });
+        res.sort(function(lhs, rhs) {
+            return rhs.completionTime.getTime() - lhs.completionTime.getTime();
+        });
+        return res;
+    }
+};
+
+app.controller('tasklistController', function($scope, gsignin, taskapi) {
+    $scope.filters = [AllFilter, CompletedFilter];
     $scope.raw_tasklist = taskapi.tasklist;
-    $scope.tasklist = new FilteredTasklist($scope.raw_tasklist, $scope.filters.Next);
+    $scope.tasklist = new FilteredTasklist($scope.raw_tasklist, AllFilter);
 
     Object.defineProperty($scope, 'filter', {
         enumerable: true,
