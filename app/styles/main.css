@@ -1,5 +1,6 @@
 html, body {
     height: 100%;
+    font-size: 16px;
 }
 
 body {
@@ -26,7 +27,7 @@ body {
     padding: 0px;
     position: absolute;
     overflow: auto;
-    top: 25px;
+    top: 28px;
     bottom: 0px;
     width: 100%;
     margin: 0px;
@@ -44,7 +45,7 @@ body {
 }
 
 .tasklist .item {
-    height: 25px;
+    height: 28px;
     padding: 0px;
     padding-right: 0.5em;
     margin: 0 0;
@@ -172,7 +173,7 @@ body {
 
 #sidebar-button-wrapper {
     float: left;
-    height: 25px;
+    height: 28px;
     display: none;
 }
 
@@ -184,7 +185,7 @@ body {
 
 #sidebar.sidebar-active {
     position: fixed;
-    top: 25px;
+    top: 28px;
     bottom: 0px;
     background-color: white;
     z-index: 1;
