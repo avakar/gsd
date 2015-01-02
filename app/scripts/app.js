@@ -950,10 +950,12 @@ var AllFilter = {
                 cat = task.startDate;
             }
 
-            if (!(cat in res))
-                res[cat] = new FilteredList(formatStartDate(cat, 'human'), cat, [task]);
-            else
+            if (!(cat in res)) {
+                var name = cat === 'next'? '': formatStartDate(cat, 'human');
+                res[cat] = new FilteredList(name, cat, [task]);
+            } else {
                 res[cat].list.push(task);
+            }
         });
         var resarr = [];
         for (var cat in res) {
