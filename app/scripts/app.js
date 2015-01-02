@@ -180,6 +180,39 @@ app.directive('arrowNavigable', function() {
     };
 });
 
+function formatStartDate(date, format) {
+    if (date instanceof Date) {
+        date = new Date(date.getTime());
+        date.setUTCHours(0, 0, 0, 0);
+        var now = new Date();
+        now.setUTCHours(0, 0, 0, 0);
+
+        var diff = date.getTime() - now.getTime();
+        if (diff === 0)
+            return 'today';
+        if (diff === 86400000)
+            return 'tomorrow';
+        if (diff <= 604800000) {
+            var val = (diff / 86400000).toString();
+            if (format === 'human')
+                return 'in ' + val + ' days';
+            else
+                return '+' + val + 'd';
+        }
+
+        var month = (date.getUTCMonth() + 1).toString();
+        while (month.length < 2)
+            month = '0' + month;
+
+        var day = date.getUTCDate().toString();
+        while (day.length < 2)
+            day = '0' + day;
+
+        return date.getUTCFullYear().toString() + '-' + month + '-' + day;
+    }
+    return date;
+}
+
 function Task(changeCallback, id, textAndDesc) {
     var priv = {
         changeCallback: changeCallback,
@@ -456,39 +489,6 @@ function Task(changeCallback, id, textAndDesc) {
         changeCallback(this);
         return state.prefix;
     };
-
-    function formatStartDate(date, format) {
-        if (date instanceof Date) {
-            date = new Date(date.getTime());
-            date.setUTCHours(0, 0, 0, 0);
-            var now = new Date();
-            now.setUTCHours(0, 0, 0, 0);
-
-            var diff = date.getTime() - now.getTime();
-            if (diff === 0)
-                return 'today';
-            if (diff === 86400000)
-                return 'tomorrow';
-            if (diff <= 604800000) {
-                var val = (diff / 86400000).toString();
-                if (format === 'human')
-                    return 'in ' + val + ' days';
-                else
-                    return '+' + val + 'd';
-            }
-
-            var month = (date.getUTCMonth() + 1).toString();
-            while (month.length < 2)
-                month = '0' + month;
-
-            var day = date.getUTCDate().toString();
-            while (day.length < 2)
-                day = '0' + day;
-
-            return date.getUTCFullYear().toString() + '-' + month + '-' + day;
-        }
-        return date;
-    }
 
     this.getFriendlyStartDate = function() {
         return formatStartDate(priv.startDate, 'human');
@@ -846,10 +846,8 @@ function FilteredTasklist(tasklist, filter) {
         };
 
     this.tasklist = tasklist;
-    this.filtered = [];
 
-    var oldSplice = this.filtered.splice;
-    this.filtered.splice = function(start, deleteCount) {
+    function filteredSplice(start, deleteCount) {
         var nextTask;
         if (start + deleteCount < this.length)
             nextTask = this[start + deleteCount];
@@ -866,8 +864,11 @@ function FilteredTasklist(tasklist, filter) {
         tasklist.events.$emit('change');
         priv.suppress_prefilter = false;
 
-        return oldSplice.apply(this, arguments);
+        return Array.prototype.splice.apply(this, arguments);
     };
+
+    this.filtered = [];
+    this.filtered.splice = filteredSplice;
 
     Object.defineProperty(this, 'filter', {
         enumerable: true,
@@ -880,7 +881,7 @@ function FilteredTasklist(tasklist, filter) {
     });
 
     this.prefilter = function() {
-        oldSplice.call(this.filtered, 0, this.filtered.length);
+        Array.prototype.splice.call(this.filtered, 0, this.filtered.length);
 
         var filtered = [];
         tasklist.forEach(function(cur) {
@@ -898,6 +899,9 @@ function FilteredTasklist(tasklist, filter) {
         });
 
         this.filtered = priv.filter.filter(filtered);
+        this.filtered.forEach(function(list) {
+            list.list.splice = filteredSplice;
+        });
     };
 
     this.setContextFilter = function(contexts) {
@@ -920,16 +924,62 @@ function FilteredTasklist(tasklist, filter) {
     });
 }
 
+function FilteredList(name, cat, list) {
+    this.name = name;
+    this.cat = cat;
+    this.list = list;
+}
+
 var AllFilter = {
     name: 'All',
     allowSort: true,
     filter: function(tasklist) {
-        var res = [];
+        var res = {};
         tasklist.forEach(function(task) {
-            if (!task.complete)
-                res.push(task);
+            if (task.complete)
+                return;
+            var cat;
+            var now = Date.now();
+            if (task.startDate instanceof Date) {
+                if (task.startDate.getTime() < now) {
+                    cat = 'next';
+                } else {
+                    cat = task.startDate;
+                }
+            } else {
+                cat = task.startDate;
+            }
+
+            if (!(cat in res))
+                res[cat] = new FilteredList(formatStartDate(cat, 'human'), cat, [task]);
+            else
+                res[cat].list.push(task);
         });
-        return res;
+        var resarr = [];
+        for (var cat in res) {
+            resarr.push(res[cat]);
+        }
+
+        function startDateToOrder(d) {
+            if (d === 'next')
+                return [0];
+            if (d === 'waiting')
+                return [2];
+            if (d === 'someday')
+                return [3];
+            return [1, d.getTime()];
+        }
+
+        resarr.sort(function(lhs, rhs) {
+            lhs = startDateToOrder(lhs.cat);
+            rhs = startDateToOrder(rhs.cat);
+            for (var i = 0; i < lhs.length && i < rhs.length; ++i) {
+                if (lhs[i] !== rhs[i])
+                    return lhs[i] - rhs[i];
+            }
+            return lhs.length - rhs.length;
+        });
+        return resarr;
     }
 };
 
@@ -945,7 +995,7 @@ var CompletedFilter = {
         res.sort(function(lhs, rhs) {
             return rhs.completionTime.getTime() - lhs.completionTime.getTime();
         });
-        return res;
+        return [new FilteredList('', 'completed', res)];
     }
 };
 

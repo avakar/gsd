@@ -22,8 +22,7 @@ body {
     z-index: 1;
 }
 
-#tasklist {
-    list-style: none outside none;
+.tasklist {
     padding: 0px;
     position: absolute;
     overflow: auto;
@@ -33,7 +32,18 @@ body {
     margin: 0px;
 }
 
-#tasklist .item {
+.tasklist h3 {
+    margin: 0px;
+}
+
+.tasklist ul {
+    list-style: none outside none;
+    padding: 0px;
+    width: 100%;
+    margin: 0px;
+}
+
+.tasklist .item {
     height: 25px;
     padding: 0px;
     padding-right: 0.5em;
@@ -45,16 +55,16 @@ body {
     text-align: left;
 }
 
-#tasklist .item .item-text {
+.tasklist .item .item-text {
     width: auto;
     overflow: hidden;
 }
 
-#tasklist .item .item-complete {
+.tasklist .item .item-complete {
     float: left;
 }
 
-#tasklist .item .item-text-input {
+.tasklist .item .item-text-input {
     padding-left: 0.4em;
     background: none;
     border: 0px;
@@ -63,25 +73,25 @@ body {
     text-overflow: ellipsis;
 }
 
-#tasklist .item .item-tags {
+.tasklist .item .item-tags {
     float: right;
     margin-left: 1em;
     margin-right: 0px;
 }
 
-#tasklist .item .item-tag {
+.tasklist .item .item-tag {
     font-size: x-small;
     color: #386C8E;
     margin: 0.5em;
 }
 
-#tasklist .item .item-contexts {
+.tasklist .item .item-contexts {
     float: right;
     margin-left: 0px;
     margin-right: 0.5em;
 }
 
-#tasklist .item .item-date-wrapper {
+.tasklist .item .item-date-wrapper {
     float: right;
     margin-left: 0px;
     margin-right: 0.5em;
@@ -123,16 +133,16 @@ body {
     background-color: black;
 }
 
-#tasklist .item .item-edit {
+.tasklist .item .item-edit {
     float: right;
     cursor: pointer;
 }
 
-#tasklist .item:hover .item-edit {
+.tasklist .item:hover .item-edit {
     visibility: visible;
 }
 
-#tasklist .item .drag-handle {
+.tasklist .item .drag-handle {
     height: 1.6em;
     float: left;
     cursor: move;
@@ -141,7 +151,7 @@ body {
     background: repeating-linear-gradient(90deg, #83AECA, #83AECA 1px, #e9f2f9 1px, #e9f2f9 2px);
 }
 
-#tasklist .item .item-edit-box {
+.tasklist .item .item-edit-box {
     float: right;
     width: 60%;
 }
