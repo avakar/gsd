@@ -966,10 +966,10 @@ var AllFilter = {
             if (d === 'next')
                 return [0];
             if (d === 'waiting')
-                return [2];
+                return [1];
             if (d === 'someday')
                 return [3];
-            return [1, d.getTime()];
+            return [2, d.getTime()];
         }
 
         resarr.sort(function(lhs, rhs) {
