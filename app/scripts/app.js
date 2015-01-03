@@ -868,7 +868,6 @@ function FilteredTasklist(tasklist, filter) {
     };
 
     this.filtered = [];
-    this.filtered.splice = filteredSplice;
 
     Object.defineProperty(this, 'filter', {
         enumerable: true,
@@ -881,8 +880,6 @@ function FilteredTasklist(tasklist, filter) {
     });
 
     this.prefilter = function() {
-        Array.prototype.splice.call(this.filtered, 0, this.filtered.length);
-
         var filtered = [];
         tasklist.forEach(function(cur) {
             var matchesCtx = priv.contextFilter.length === 0 ||
@@ -898,10 +895,24 @@ function FilteredTasklist(tasklist, filter) {
                 filtered.push(cur);
         });
 
-        this.filtered = priv.filter.filter(filtered);
+        var newFiltered = priv.filter.filter(filtered);
+
+        var oldCats = {};
         this.filtered.forEach(function(list) {
-            list.list.splice = filteredSplice;
+            oldCats[list.cat] = list;
         });
+
+        this.filtered = [];
+        newFiltered.forEach(function(group) {
+            group.list.splice = filteredSplice
+            if (group.cat in oldCats) {
+                var oldFilter = oldCats[group.cat];
+                oldFilter.list = group.list;
+                this.filtered.push(oldFilter);
+            } else {
+                this.filtered.push(group);
+            }
+        }, this);
     };
 
     this.setContextFilter = function(contexts) {
