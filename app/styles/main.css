@@ -93,7 +93,7 @@ body {
     margin-right: 0.5em;
 }
 
-.tasklist .item .item-date-wrapper {
+.tasklist .item .item-due-wrapper {
     float: right;
     margin-left: 0px;
     margin-right: 0.5em;
@@ -114,13 +114,28 @@ body {
     cursor: pointer;
 }
 
-.item-date-wrapper .item-date {
-    font-size: smaller;
-    color: red;
-    border: 1px solid red;
-    border-radius: 5px;
+.item-due-wrapper .item-due {
+    font-size: 8pt;
+/*    border-style: solid;
+    border-width: 1px;
+    border-radius: 5px;*/
     padding: 2px;
     cursor: pointer;
+}
+
+.item-due-high {
+    color: red;
+    border-color: red;
+}
+
+.item-due-med {
+    color: darkorange;
+    border-color: darkorange;
+}
+
+.item-due-low {
+    color: green;
+    border-color: green;
 }
 
 .context-btns li {

@@ -180,14 +180,16 @@ app.directive('arrowNavigable', function() {
     };
 });
 
-function formatStartDate(date, format) {
-    if (date instanceof Date) {
-        date = new Date(date.getTime());
-        date.setUTCHours(0, 0, 0, 0);
-        var now = new Date();
-        now.setUTCHours(0, 0, 0, 0);
+function formatDate(date, format) {
+    date = new Date(date.getTime());
+    date.setUTCHours(0, 0, 0, 0);
+    var now = new Date();
+    now.setUTCHours(0, 0, 0, 0);
 
-        var diff = date.getTime() - now.getTime();
+    var day = date.getUTCDate();
+
+    var diff = date.getTime() - now.getTime();
+    if (diff >= 0) {
         if (diff === 0)
             return 'today';
         if (diff === 86400000)
@@ -200,7 +202,6 @@ function formatStartDate(date, format) {
                 return '+' + val + 'd';
         }
 
-        var day = date.getUTCDate();
         if (format === 'human' && day === 1) {
             var monthDiff =
                 (date.getUTCFullYear() * 12 + date.getUTCMonth()) -
@@ -210,17 +211,40 @@ function formatStartDate(date, format) {
             if (monthDiff < 12)
                 return 'in ' + monthDiff.toString() + ' months';
         }
-
-        var month = (date.getUTCMonth() + 1).toString();
-        while (month.length < 2)
-            month = '0' + month;
-
-        day = day.toString();
-        while (day.length < 2)
-            day = '0' + day;
-
-        return date.getUTCFullYear().toString() + '-' + month + '-' + day;
     }
+
+    var month = (date.getUTCMonth() + 1).toString();
+    while (month.length < 2)
+        month = '0' + month;
+
+    day = day.toString();
+    while (day.length < 2)
+        day = '0' + day;
+    return date.getUTCFullYear().toString() + '-' + month + '-' + day;
+}
+
+function formatStartDate(date, format) {
+    if (date instanceof Date)
+        return formatDate(date, format);
+    return date;
+}
+
+function formatDueDate(date, format) {
+    if (date === null)
+        return '';
+
+    var now = new Date();
+    now.setUTCHours(0, 0, 0, 0);
+
+    date = new Date(date.getTime());
+    date.setUTCHours(0, 0, 0, 0);
+
+    if (format === 'human' && date.getTime() < now.getTime())
+        return 'past due';
+
+    var date = formatDate(date, format);
+    if (format === 'human')
+        return 'due ' + date;
     return date;
 }
 
@@ -230,6 +254,7 @@ function Task(changeCallback, id, textAndDesc) {
         id: id,
         text: '',
         completionTime: null,
+        dueDate: null,
         tags: [],
         contexts: [],
         startDate: 'next',
@@ -311,6 +336,16 @@ function Task(changeCallback, id, textAndDesc) {
         get: function() { return priv.startDate; },
     });
 
+    Object.defineProperty(this, 'dueDate', {
+        enumerable: true,
+        configurable: false,
+        get: function() { return priv.dueDate; },
+    });
+
+    this.getFriendlyDueDate = function() {
+        return formatDueDate(priv.dueDate, 'human');
+    }
+
     this.load = function(t) {
         priv.id = t.id;
         priv.text = t.text;
@@ -320,13 +355,22 @@ function Task(changeCallback, id, textAndDesc) {
             } else {
                 priv.completionTime = null;
             }
-        }
-        if ('completionTime' in t) {
-            priv.completionTime = t.completionTime;
-            if (priv.completionTime !== null) {
-                priv.completionTime = new Date(priv.completionTime);
+        } else {
+            priv.completionTime = null;
+            if ('completionTime' in t) {
+                if (typeof t.completionTime === 'string') {
+                    priv.completionTime = new Date(t.completionTime);
+                } else if (typeof t.completionTime === 'number') {
+                    priv.completionTime = new Date(t.completionTime * 1000);
+                }
             }
         }
+
+        if ('dueDate' in t && t.dueDate !== null)
+            priv.dueDate = new Date(t.dueDate*1000);
+        else
+            priv.dueDate = null;
+
         var newTags = [];
         if ('tags' in t) {
             t.tags.forEach(function(tag) {
@@ -362,7 +406,8 @@ function Task(changeCallback, id, textAndDesc) {
         return {
             id: priv.id,
             text: priv.text,
-            completionTime: priv.completionTime === null? null: priv.completionTime.toISOString(),
+            completionTime: priv.completionTime === null? null: priv.completionTime.getTime() / 1000,
+            dueDate: priv.dueDate === null? null: priv.dueDate.getTime() / 1000,
             tags: priv.tags,
             contexts: priv.contexts,
             startDate: priv.startDate instanceof Date? priv.startDate.getTime() / 1000: priv.startDate,
@@ -378,9 +423,10 @@ function Task(changeCallback, id, textAndDesc) {
             newTags: [],
             newCtxs: [],
             newStartDate: priv.startDate,
+            newDueDate: null,
             };
 
-        function parseStartDate(s) {
+        function parseDate(s) {
             var res = null;
             if (s.substr(0, 1) === '+') {
                 s = s.substr(1);
@@ -466,9 +512,14 @@ function Task(changeCallback, id, textAndDesc) {
                 state.newCtxs.push(cur);
                 break;
             case 3:
-                var tmp = parseStartDate(cur);
+                var tmp = parseDate(cur);
                 if (tmp !== null)
                     state.newStartDate = tmp;
+                break;
+            case 4:
+                var tmp = parseDate(cur);
+                if (tmp !== null)
+                    state.newDueDate = tmp;
                 break;
             }
         }
@@ -486,6 +537,10 @@ function Task(changeCallback, id, textAndDesc) {
                 addPart();
                 state.kind = 3;
                 state.cur = [comp.substr(1)];
+            } else if (comp.length > 0 && comp[0] === '%') {
+                addPart();
+                state.kind = 4;
+                state.cur = [comp.substr(1)];
             } else {
                 state.cur.push(comp);
             }
@@ -497,6 +552,7 @@ function Task(changeCallback, id, textAndDesc) {
         priv.tags = jQuery.unique(state.newTags);
         priv.contexts = jQuery.unique(state.newCtxs);
         priv.startDate = state.newStartDate;
+        priv.dueDate = state.newDueDate;
         changeCallback(this);
         return state.prefix;
     };
@@ -505,6 +561,8 @@ function Task(changeCallback, id, textAndDesc) {
         var parts = [];
         if (priv.startDate !== 'next')
             parts.push('^' + formatStartDate(priv.startDate, 'desc'));
+        if (priv.dueDate !== null)
+            parts.push('%' + formatDueDate(priv.dueDate, 'desc'));
         if (priv.tags.length)
             parts.push('#' + priv.tags.join(' #'));
         if (priv.contexts.length)
@@ -711,7 +769,7 @@ function Tasklist() {
 
         var cur = priv.head.next;
         while (cur !== priv.head) {
-            res.push(cur);
+            res.push(cur.store());
             cur = cur.next;
         }
 
@@ -1043,9 +1101,15 @@ app.controller('tasklistController', function($scope, gsignin, taskapi) {
     $scope.createNewTask = function(e) {
         var val = e.target.value;
         e.target.value = '';
-        if (contextFilters.length)
-            val = val + ' @' + contextFilters[0];
-        this.tasklist.addTask(val);
+        switch (val) {
+        case '!debug':
+            this.showDebug = !this.showDebug;
+            break;
+        default:
+            if (contextFilters.length)
+                val = val + ' @' + contextFilters[0];
+            this.tasklist.addTask(val);
+        }
         e.preventDefault();
     };
 
@@ -1109,6 +1173,20 @@ app.controller('tasklistController', function($scope, gsignin, taskapi) {
         else
             task.applyDescriptor(value);
     };
+
+    $scope.getDueDateClass = function(entry) {
+        var dd = entry.dueDate;
+        if (dd === null)
+            return '';
+        var diff = dd.getTime() - Date.now();
+        if (diff < 86400000)
+            return 'item-due-high';
+        if (diff < 604800000)
+            return 'item-due-med';
+        return 'item-due-low';
+    };
+
+    $scope.showDebug = false;
 });
 
 app.directive('inlineEditContext', function() {

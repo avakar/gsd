@@ -63,6 +63,10 @@
                                 <span class="item-tag" ng-repeat="tag in entry.tags">#{{tag}}</span>
                             </span>
 
+                            <span class="item-due-wrapper" ng-click="beginEdit()" ng-hide="editting || entry.dueDate === null">
+                                <span class="item-due" ng-class="getDueDateClass(entry)">{{entry.getFriendlyDueDate()}}</span>
+                            </span>
+
                             <input class="item-edit-box" inline-edit-input type="text" placeholder="^start #proj @context">
 
                             <div class="item-text">
@@ -72,6 +76,7 @@
                     </li>
                 </ul>
             </div>
+            <pre ng-hide="!showDebug">{{raw_tasklist.toJson()}}</pre>
         </div>
     </div>
 
