@@ -34,7 +34,10 @@ body {
 }
 
 .tasklist h3 {
-    margin: 0px;
+    font-size: 18px;
+    margin-top: 6px;
+    margin-bottom: 2px;
+    color: #83AECA;
 }
 
 .tasklist ul {

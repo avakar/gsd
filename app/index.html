@@ -46,7 +46,7 @@
 
         <div class="tasklist">
             <div ng-repeat="group in tasklist.filtered">
-                <h3>{{group.name}}</h3>
+                <h3 ng-hide="!group.name">{{group.name}}</h3>
                 <ul ui-sortable="sortableOptions" ng-model="group.list">
                     <li ng-repeat="entry in group.list" class="item">
                         <div class="drag-handle"></div>
