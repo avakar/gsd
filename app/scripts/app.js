@@ -200,11 +200,22 @@ function formatStartDate(date, format) {
                 return '+' + val + 'd';
         }
 
+        var day = date.getUTCDate();
+        if (format === 'human' && day === 1) {
+            var monthDiff =
+                (date.getUTCFullYear() * 12 + date.getUTCMonth()) -
+                (now.getUTCFullYear() * 12 + now.getUTCMonth());
+            if (monthDiff === 1)
+                return 'next month';
+            if (monthDiff < 12)
+                return 'in ' + monthDiff.toString() + ' months';
+        }
+
         var month = (date.getUTCMonth() + 1).toString();
         while (month.length < 2)
             month = '0' + month;
 
-        var day = date.getUTCDate().toString();
+        day = day.toString();
         while (day.length < 2)
             day = '0' + day;
 
@@ -488,10 +499,6 @@ function Task(changeCallback, id, textAndDesc) {
         priv.startDate = state.newStartDate;
         changeCallback(this);
         return state.prefix;
-    };
-
-    this.getFriendlyStartDate = function() {
-        return formatStartDate(priv.startDate, 'human');
     };
 
     this.getDescriptor = function() {
