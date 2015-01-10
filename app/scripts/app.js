@@ -1103,7 +1103,7 @@ var CompletedFilter = {
     }
 };
 
-app.controller('tasklistController', function($scope, gsignin, taskapi, redigest) {
+app.controller('tasklistController', function($scope, $http, gsignin, taskapi, redigest) {
     $scope.filters = [AllFilter, CompletedFilter];
     $scope.raw_tasklist = taskapi.tasklist;
     $scope.tasklist = new FilteredTasklist($scope.raw_tasklist, AllFilter, redigest);
@@ -1208,6 +1208,21 @@ app.controller('tasklistController', function($scope, gsignin, taskapi, redigest
     };
 
     $scope.showDebug = false;
+
+    $scope.userPhotoUrl = '';
+    $scope.$on('gsignin', function(event, authResult) {
+        if (authResult.status.signed_in) {
+            $http.get('https://www.googleapis.com/plus/v1/people/me', {
+                headers: { 'Authorization': 'Bearer ' + authResult.access_token }
+            }).success(function(data) {
+                $scope.userPhotoUrl = data.image.url;
+            }).error(function() {
+                $scope.userPhotoUrl = '';
+            });
+        } else {
+            $scope.userPhotoUrl = '';
+        }
+    });
 });
 
 app.directive('inlineEditContext', function() {
