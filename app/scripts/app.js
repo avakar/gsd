@@ -184,6 +184,7 @@ function formatDate(date, format) {
     date = new Date(date.getTime());
     date.setUTCHours(0, 0, 0, 0);
     var now = new Date();
+
     now.setUTCHours(0, 0, 0, 0);
 
     var day = date.getUTCDate();
@@ -226,25 +227,6 @@ function formatDate(date, format) {
 function formatStartDate(date, format) {
     if (date instanceof Date)
         return formatDate(date, format);
-    return date;
-}
-
-function formatDueDate(date, format) {
-    if (date === null)
-        return '';
-
-    var now = new Date();
-    now.setUTCHours(0, 0, 0, 0);
-
-    date = new Date(date.getTime());
-    date.setUTCHours(0, 0, 0, 0);
-
-    if (format === 'human' && date.getTime() < now.getTime())
-        return 'past due';
-
-    var date = formatDate(date, format);
-    if (format === 'human')
-        return 'due ' + date;
     return date;
 }
 
@@ -343,7 +325,7 @@ function Task(changeCallback, id, textAndDesc) {
     });
 
     this.getFriendlyDueDate = function() {
-        return formatDueDate(priv.dueDate, 'human');
+        return priv.dueDate === null? '': 'due ' + priv.dueDate.fromNowFriendly()
     }
 
     this.load = function(t) {
@@ -367,7 +349,7 @@ function Task(changeCallback, id, textAndDesc) {
         }
 
         if ('dueDate' in t && t.dueDate !== null)
-            priv.dueDate = new Date(t.dueDate*1000);
+            priv.dueDate = taskmoment(t.dueDate);
         else
             priv.dueDate = null;
 
@@ -407,7 +389,7 @@ function Task(changeCallback, id, textAndDesc) {
             id: priv.id,
             text: priv.text,
             completionTime: priv.completionTime === null? null: priv.completionTime.getTime() / 1000,
-            dueDate: priv.dueDate === null? null: priv.dueDate.getTime() / 1000,
+            dueDate: priv.dueDate === null? null: priv.dueDate.store(),
             tags: priv.tags,
             contexts: priv.contexts,
             startDate: priv.startDate instanceof Date? priv.startDate.getTime() / 1000: priv.startDate,
@@ -517,7 +499,7 @@ function Task(changeCallback, id, textAndDesc) {
                     state.newStartDate = tmp;
                 break;
             case 4:
-                var tmp = parseDate(cur);
+                var tmp = taskmoment(cur);
                 if (tmp !== null)
                     state.newDueDate = tmp;
                 break;
@@ -562,7 +544,7 @@ function Task(changeCallback, id, textAndDesc) {
         if (priv.startDate !== 'next')
             parts.push('^' + formatStartDate(priv.startDate, 'desc'));
         if (priv.dueDate !== null)
-            parts.push('%' + formatDueDate(priv.dueDate, 'desc'));
+            parts.push('%' + (priv.dueDate === null? '': priv.dueDate.fromNow()));
         if (priv.tags.length)
             parts.push('#' + priv.tags.join(' #'));
         if (priv.contexts.length)
@@ -1178,12 +1160,7 @@ app.controller('tasklistController', function($scope, gsignin, taskapi) {
         var dd = entry.dueDate;
         if (dd === null)
             return '';
-        var diff = dd.getTime() - Date.now();
-        if (diff < 86400000)
-            return 'item-due-high';
-        if (diff < 604800000)
-            return 'item-due-med';
-        return 'item-due-low';
+        return 'item-due-' + entry.dueDate.closeness();
     };
 
     $scope.showDebug = false;

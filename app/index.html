@@ -48,7 +48,7 @@
             <div ng-repeat="group in tasklist.filtered">
                 <h3 ng-hide="!group.name">{{group.name}}</h3>
                 <ul ui-sortable="sortableOptions" ng-model="group.list">
-                    <li ng-repeat="entry in group.list" class="item">
+                    <li ng-repeat="entry in group.list" class="item" ng-class="getDueDateClass(entry)">
                         <div class="drag-handle"></div>
                         <div inline-edit-context="{ get: 'entry.getDescriptor()', set: 'applyDescriptor(entry, $value)'}">
                             <input class="item-complete" type="checkbox" ng-model="entry.complete">
@@ -64,7 +64,7 @@
                             </span>
 
                             <span class="item-due-wrapper" ng-click="beginEdit()" ng-hide="editting || entry.dueDate === null">
-                                <span class="item-due" ng-class="getDueDateClass(entry)">{{entry.getFriendlyDueDate()}}</span>
+                                <span class="item-due">{{entry.getFriendlyDueDate()}}</span>
                             </span>
 
                             <input class="item-edit-box" inline-edit-input type="text" placeholder="^start #proj @context">
@@ -96,6 +96,7 @@
     <!-- endbuild -->
 
         <!-- build:js({.tmp,app}) scripts/scripts.js -->
+        <script src="scripts/taskmoment.js"></script>
         <script src="scripts/app.js"></script>
         <script src="scripts/controllers/main.js"></script>
         <script src="scripts/controllers/about.js"></script>

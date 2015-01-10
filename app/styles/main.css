@@ -57,6 +57,10 @@ body {
     text-align: left;
 }
 
+.tasklist .item.item-due-past {
+    background-color: #FFEDED;
+}
+
 .tasklist .item .item-text {
     width: auto;
     overflow: hidden;
@@ -123,17 +127,17 @@ body {
     cursor: pointer;
 }
 
-.item-due-high {
+.item-due-high .item-due, .item-due-past .item-due {
     color: red;
     border-color: red;
 }
 
-.item-due-med {
+.item-due-med .item-due {
     color: darkorange;
     border-color: darkorange;
 }
 
-.item-due-low {
+.item-due-low .item-due {
     color: green;
     border-color: green;
 }
@@ -166,6 +170,10 @@ body {
     width: 1em;
     margin-right: 0.3em;
     background: repeating-linear-gradient(90deg, #83AECA, #83AECA 1px, #e9f2f9 1px, #e9f2f9 2px);
+}
+
+.tasklist .item.item-due-past .drag-handle {
+    background: repeating-linear-gradient(90deg, #FFB4B4, #FFB4B4 1px, #FFEDED 1px, #FFEDED 2px);
 }
 
 .tasklist .item .item-edit-box {
