@@ -1,3 +1,6 @@
+'use strict';
+/*exported taskmoment*/
+
 var taskmoment = (function(){
 
 function TaskMoment(parts) {
@@ -5,7 +8,7 @@ function TaskMoment(parts) {
 }
 
 function partsToDate(parts) {
-    p = [null].concat(parts);
+    var p = [null].concat(parts);
     if (p.length === 2)
         p.push(0);
     return new (Date.bind.apply(Date, p))();
@@ -42,33 +45,35 @@ function fromTs(ts, r) {
     return new TaskMoment(parts.slice(0, r));
 }
 
-TaskMoment.parse = function(s) {
+TaskMoment.parse = function(s, r) {
+    function parseOne(s) {
+        return parseInt(s, 10);
+    }
+
     if (s === null)
         return null;
 
     if (typeof s === 'number')
-        return fromTs(s * 1000, 3);
+        return fromTs(s, r || 3);
 
     if (s instanceof Array)
         return new TaskMoment(s);
 
     var parts = s.split('-');
     if (parts.length > 1 && parts.length < 6) {
-        function parseOne(s) {
-            return parseInt(s, 10);
-        }
-
         parts = parts.map(parseOne);
         if (!parts.some(isNaN))
             return new TaskMoment(parts);
     }
+
+    var d, diff;
 
     // This also catches the empty string as-if it were 'today'
     switch (unabbrev(s, ['today', 'tomorrow', 'now'])) {
     case 'today':
         return fromTs(new Date(), 3);
     case 'tomorrow': {
-        var d = new Date();
+        d = new Date();
         d.setDate(d.getDate() + 1);
         return fromTs(d, 3);
     }
@@ -79,8 +84,8 @@ TaskMoment.parse = function(s) {
     if (s.length >= 3) {
         var dow = unabbrev_index(s, ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']);
         if (dow !== null) {
-            var d = new Date();
-            var diff = dow - d.getDay();
+            d = new Date();
+            diff = dow - d.getDay();
             if (diff < 0)
                 diff += 7;
             d.setDate(d.getDate() + diff);
@@ -90,8 +95,8 @@ TaskMoment.parse = function(s) {
         var mon = unabbrev_index(s, ['january', 'february', 'march', 'april', 'may', 'june',
             'july', 'august', 'september', 'october', 'november', 'december']);
         if (mon !== null) {
-            var d = new Date();
-            var diff = mon - d.getMonth();
+            d = new Date();
+            diff = mon - d.getMonth();
             if (diff < 0)
                 diff += 12;
             d.setMonth(d.getMonth() + diff);
@@ -103,7 +108,7 @@ TaskMoment.parse = function(s) {
         var nonDigitIndex = s.length;
         for (var i = 0; i < s.length; ++i) {
             var ch = s.charCodeAt(i);
-            if ((0x30 > ch || ch > 0x39) && ch != 0x2d && ch != 0x2b) {
+            if ((0x30 > ch || ch > 0x39) && ch !== 0x2d && ch !== 0x2b) {
                 nonDigitIndex = i;
                 break;
             }
@@ -115,7 +120,7 @@ TaskMoment.parse = function(s) {
             if (unit === '')
                 unit = 'd';
 
-            res = new Date();
+            var res = new Date();
             switch (unabbrev(unit, ['seconds', 'minutes', 'hours', 'days', 'weeks', 'months', 'Months', 'years'])) {
             case 'seconds':
                 res.setSeconds(res.getSeconds() + value, 0);
@@ -151,11 +156,16 @@ TaskMoment.parse = function(s) {
     if (isNaN(ts))
         return null;
     return fromTs(ts, 3);
-}
+};
+
+TaskMoment.parse.now = function(r) {
+    r = r || 3;
+    return fromTs(Date.now(), r);
+};
 
 TaskMoment.prototype.store = function() {
     return this.parts.slice();
-}
+};
 
 function diff(tm, basets) {
     function trunc(n) {
@@ -163,38 +173,42 @@ function diff(tm, basets) {
     }
 
     var startDate = tm.startDate();
-    var diff;
+    var res, now;
 
     switch (tm.parts.length) {
     case 6:
-        diff = trunc((startDate.getTime() - basets) / 1000);
+        res = trunc((startDate.getTime() - basets) / 1000);
         break;
     case 5:
-        diff = trunc((startDate.getTime() - basets) / 60000);
+        res = trunc((startDate.getTime() - basets) / 60000);
         break;
     case 4:
-        diff = trunc((startDate.getTime() - basets) / 3600000);
+        res = trunc((startDate.getTime() - basets) / 3600000);
         break;
     case 3:
-        diff = trunc((startDate.getTime() - basets) / 86400000);
+        res = trunc((startDate.getTime() - basets) / 86400000);
         break;
     case 2: {
-        var now = new Date(basets);
-        diff = (12*startDate.getFullYear() + startDate.getMonth()) -
+        now = new Date(basets);
+        res = (12*startDate.getFullYear() + startDate.getMonth()) -
             (12*now.getFullYear() + now.getMonth());
         break;
     }
     case 1: {
-        var now = new Date(basets);
-        diff = startDate.getFullYear() - now.getFullYear();
+        now = new Date(basets);
+        res = startDate.getFullYear() - now.getFullYear();
         break;
     }
     }
 
-    return { value: diff, unit: tm.parts.length };
+    return { value: res, unit: tm.parts.length };
 }
 
-TaskMoment.prototype.isPast = function(tm) {
+TaskMoment.prototype.resolution = function() {
+    return this.parts.length;
+};
+
+TaskMoment.prototype.isPast = function() {
     return this.stopDate().getTime() < Date.now();
 };
 
@@ -215,17 +229,18 @@ var monNames = ['January', 'February', 'March', 'April', 'May', 'June',
 TaskMoment.prototype.fromNowFriendly = function() {
     var nowts = Date.now();
     var d = diff(this, nowts);
+    var day, mon;
 
     if (d.value === -1)
         return ['last year', 'last month', 'yesterday', 'an hour ago', 'a minute ago', 'a second ago'][d.unit-1];
 
     if (d.unit === 3 && d.value < 0 && d.value > -7) {
-        var day = (new Date(nowts)).getDay();
+        day = (new Date(nowts)).getDay();
         return 'last ' + dowNames[(day + d.value + 7) % 7];
     }
 
     if (d.unit === 2 && d.value < 0 && d.value > -12) {
-        var mon = (new Date(nowts)).getMonth();
+        mon = (new Date(nowts)).getMonth();
         return 'last ' + monNames[(mon + d.value + 12) % 12];
     }
 
@@ -253,12 +268,12 @@ TaskMoment.prototype.fromNowFriendly = function() {
         return ['next year', 'next month', 'tomorrow', 'in an hour', 'in a minute', 'in a second'][d.unit-1];
 
     if (d.unit === 3 && d.value < 7) {
-        var day = (new Date(nowts)).getDay();
+        day = (new Date(nowts)).getDay();
         return dowNames[(day + d.value) % 7];
     }
 
     if (d.unit === 2 && d.value < 12) {
-        var mon = (new Date(nowts)).getMonth();
+        mon = (new Date(nowts)).getMonth();
         return 'in ' + monNames[(mon + d.value) % 12];
     }
 
@@ -287,7 +302,7 @@ TaskMoment.prototype.closeness = function() {
     if (diff < 604800000)
         return 'med';
     return 'low';
-}
+};
 
 return TaskMoment.parse;
 

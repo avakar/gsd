@@ -1,6 +1,7 @@
 'use strict';
 /*global gapi*/
 /*global jQuery*/
+/*global taskmoment*/
 
 var app = angular.module('myapp2App', ['ui.bootstrap', 'ui.sortable', 'ui.keypress', 'angular_taglist_directive']);
 var apiPath = 'http://gsd.ratatanek.cz/api';
@@ -83,7 +84,33 @@ app.factory('$storage', function($window) {
     return $window.localStorage;
 });
 
-app.run(function($rootScope, $http, gsignin, taskapi) {
+app.factory('redigest', function($timeout) {
+    var promise = null;
+    var resolution = 0;
+
+    function start() {
+        if (resolution > 0 && resolution < 7) {
+            var stopTs = taskmoment.now(resolution).stopDate().getTime();
+            var t = stopTs - Date.now();
+            promise = $timeout(start, t);
+        } else {
+            promise = null;
+        }
+    }
+
+    function restart() {
+        if (promise !== null)
+            $timeout.cancel(promise);
+        start();
+    }
+
+    return function(r) {
+        resolution = r;
+        restart();
+    };
+});
+
+app.run(function($rootScope, $http, $interval, gsignin, taskapi) {
     $rootScope.$on('gsignin', function(scope, authResult) {
         if (authResult.status.signed_in) {
             $http.post(apiPath + '/auth/google', {
@@ -325,8 +352,8 @@ function Task(changeCallback, id, textAndDesc) {
     });
 
     this.getFriendlyDueDate = function() {
-        return priv.dueDate === null? '': 'due ' + priv.dueDate.fromNowFriendly()
-    }
+        return priv.dueDate === null? '': 'due ' + priv.dueDate.fromNowFriendly();
+    };
 
     this.load = function(t) {
         priv.id = t.id;
@@ -348,10 +375,14 @@ function Task(changeCallback, id, textAndDesc) {
             }
         }
 
-        if ('dueDate' in t && t.dueDate !== null)
-            priv.dueDate = taskmoment(t.dueDate);
-        else
+        if ('dueDate' in t && t.dueDate !== null) {
+            if (typeof t.dueDate === 'number')
+                priv.dueDate = taskmoment(t.dueDate * 1000, 3);
+            else
+                priv.dueDate = taskmoment(t.dueDate);
+        } else {
             priv.dueDate = null;
+        }
 
         var newTags = [];
         if ('tags' in t) {
@@ -483,6 +514,8 @@ function Task(changeCallback, id, textAndDesc) {
 
         function addPart() {
             var cur = state.cur.join(' ');
+            var tmp;
+
             switch (state.kind) {
             case 0:
                 state.prefix = cur;
@@ -494,12 +527,12 @@ function Task(changeCallback, id, textAndDesc) {
                 state.newCtxs.push(cur);
                 break;
             case 3:
-                var tmp = parseDate(cur);
+                tmp = parseDate(cur);
                 if (tmp !== null)
                     state.newStartDate = tmp;
                 break;
             case 4:
-                var tmp = taskmoment(cur);
+                tmp = taskmoment(cur);
                 if (tmp !== null)
                     state.newDueDate = tmp;
                 break;
@@ -885,7 +918,7 @@ app.service('taskapi', function($http, $timeout) {
     });
 });
 
-function FilteredTasklist(tasklist, filter) {
+function FilteredTasklist(tasklist, filter, redigest) {
     var priv = {
         filter: filter,
         contextFilter: [],
@@ -895,6 +928,7 @@ function FilteredTasklist(tasklist, filter) {
     this.tasklist = tasklist;
 
     function filteredSplice(start, deleteCount) {
+        /*jshint validthis:true*/
         var nextTask;
         if (start + deleteCount < this.length)
             nextTask = this[start + deleteCount];
@@ -912,7 +946,7 @@ function FilteredTasklist(tasklist, filter) {
         priv.suppress_prefilter = false;
 
         return Array.prototype.splice.apply(this, arguments);
-    };
+    }
 
     this.filtered = [];
 
@@ -951,7 +985,7 @@ function FilteredTasklist(tasklist, filter) {
 
         this.filtered = [];
         newFiltered.forEach(function(group) {
-            group.list.splice = filteredSplice
+            group.list.splice = filteredSplice;
             if (group.cat in oldCats) {
                 var oldFilter = oldCats[group.cat];
                 oldFilter.list = group.list;
@@ -960,6 +994,16 @@ function FilteredTasklist(tasklist, filter) {
                 this.filtered.push(group);
             }
         }, this);
+
+        var digestResolution = 0;
+        this.filtered.forEach(function(group) {
+            group.list.forEach(function(task) {
+                if (task.dueDate)
+                    digestResolution = Math.max(digestResolution, task.dueDate.resolution());
+            });
+        });
+
+        redigest(digestResolution);
     };
 
     this.setContextFilter = function(contexts) {
@@ -1059,10 +1103,10 @@ var CompletedFilter = {
     }
 };
 
-app.controller('tasklistController', function($scope, gsignin, taskapi) {
+app.controller('tasklistController', function($scope, gsignin, taskapi, redigest) {
     $scope.filters = [AllFilter, CompletedFilter];
     $scope.raw_tasklist = taskapi.tasklist;
-    $scope.tasklist = new FilteredTasklist($scope.raw_tasklist, AllFilter);
+    $scope.tasklist = new FilteredTasklist($scope.raw_tasklist, AllFilter, redigest);
 
     Object.defineProperty($scope, 'filter', {
         enumerable: true,
