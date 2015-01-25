@@ -8,7 +8,6 @@ import yaml
 with open(os.path.join(os.path.split(__file__)[0], 'settings.yaml'), 'rb') as fin:
     settings = yaml.load(fin)
 
-print settings
 dbconfig = settings['database']
 jwt_secret = settings['jwt_secret']
 
