@@ -4,11 +4,22 @@ sys.path.insert(0, os.path.split(__file__)[0])
 from flask import Flask, request, abort, make_response, send_from_directory
 import flask_cors, oauth2, jwt, psycopg2, json, time
 
-jwt_secret = 'asdfavradfdasf'
+import yaml
+with open(os.path.join(os.path.split(__file__)[0], 'settings.yaml'), 'rb') as fin:
+    settings = yaml.load(fin)
+
+print settings
+dbconfig = settings['database']
+jwt_secret = settings['jwt_secret']
 
 class Conn:
     def __init__(self):
-        self.conn = psycopg2.connect(database='gsd', user='avakar', password='wRu48NhM')
+        self.conn = psycopg2.connect(
+            database=dbconfig['database'],
+            user=dbconfig['user'],
+            password=dbconfig['password'],
+            host=dbconfig.get('host'),
+            port=dbconfig.get('port'))
         self.cur = self.conn.cursor()
 
     def __enter__(self):

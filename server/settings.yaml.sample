@@ -1,0 +1,7 @@
+database:
+    host: ~
+    database: mydb
+    user: myuser
+    password: mypass
+
+jwt_secret: mysecret
