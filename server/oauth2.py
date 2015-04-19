@@ -2,6 +2,9 @@ import requests, json, urllib, urlparse, string, random, base64, Crypto, jwt
 
 google_discovery_url = 'https://accounts.google.com/.well-known/openid-configuration'
 
+def add_base64_padding(s):
+    return s + '='*((4 - (len(s) % 4)) % 4)
+
 class Provider:
     def __init__(self):
         self._config = {}
@@ -44,6 +47,7 @@ class Provider:
         if key['kty'] == 'RSA':
             t = key['n'], key['e']
             t = map(lambda s: s.encode('ascii'), t)
+            t = map(add_base64_padding, t)
             t = map(base64.urlsafe_b64decode, t)
             t = map(Crypto.Util.number.bytes_to_long, t)
             key['imported'] = Crypto.PublicKey.RSA.construct(t)
