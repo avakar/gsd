@@ -1,15 +1,32 @@
-import requests, json, urllib, urlparse, string, random, base64, Crypto, jwt
+import struct, requests, json, urllib, urlparse, string, random, base64, jwt
+import cryptography
+import cryptography.hazmat.primitives.serialization
 
 google_discovery_url = 'https://accounts.google.com/.well-known/openid-configuration'
+google_client_id = '1072740187119-8ls2oofeinouckglv02pq6ao3s82vi70.apps.googleusercontent.com'
 
 def add_base64_padding(s):
     return s + '='*((4 - (len(s) % 4)) % 4)
 
+def _int_from_bytes(data):
+    if len(data) % 4 != 0:
+        data = (b'\x00' * (4 - (len(data) % 4))) + data
+
+    result = 0
+
+    while len(data) > 0:
+        digit, = struct.unpack('>I', data[:4])
+        result = (result << 32) + digit
+        data = data[4:]
+
+    return result
+
 class Provider:
-    def __init__(self):
+    def __init__(self, audience=google_client_id):
         self._config = {}
         self.id_token = None
         self.keys = []
+        self.audience = audience
 
     def jwt_decode(self, token):
         token = token.encode('ascii')
@@ -17,7 +34,7 @@ class Provider:
         header = json.loads(header)
         for k in self.keys:
             if k['kid'] == header['kid']:
-                return jwt.decode(token, k['imported'])
+                return jwt.decode(token, k['imported'], audience=self.audience)
 
     def config(self, **kw):
         self._config.update(kw)
@@ -49,8 +66,9 @@ class Provider:
             t = map(lambda s: s.encode('ascii'), t)
             t = map(add_base64_padding, t)
             t = map(base64.urlsafe_b64decode, t)
-            t = map(Crypto.Util.number.bytes_to_long, t)
-            key['imported'] = Crypto.PublicKey.RSA.construct(t)
+            t = map(_int_from_bytes, t)
+            key['imported'] = cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicNumbers(
+                t[1], t[0]).public_key(cryptography.hazmat.backends.default_backend())
         else:
             return
 
