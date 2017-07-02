@@ -4,7 +4,7 @@
 /*global taskmoment*/
 
 var app = angular.module('myapp2App', ['ui.bootstrap', 'ui.sortable', 'ui.keypress', 'angular_taglist_directive']);
-var apiPath = 'http://gsd.ratatanek.cz/api';
+var apiPath = 'https://gsd.ratatanek.cz/api';
 
 app.provider('gsignin', function() {
     function Gsignin($rootScope, $timeout, provider) {
